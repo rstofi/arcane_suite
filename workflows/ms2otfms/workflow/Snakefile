@@ -1,0 +1,11 @@
+#Sankefile
+
+rule all:
+    input:
+        'final.ms'
+        
+rule split_calibrators:
+    input:
+        'input.ms'
+    output:
+        'calibrators.ms'
