@@ -1,11 +1,102 @@
-#Sankefile
+"""Sankefile
+"""
 
+#=== Configuration ===
+#WORKING_DIR = os.getcwd()
+
+#DATA_DIR = WORKING_DIR + '/input'
+#RESULTS_DIR = WORKING_DIR + '/results'
+
+def access_wildcards(wildcards):
+    #This runs the function even during dry runs
+    print(wildcards.field_ID)
+    print(type(wildcards.field_ID))
+
+    #return str(int(wildcards.field_ID) + 1)
+    return wildcards.field_ID
+
+#workdir: WORKING_DIR
+#FIELDS=range(0,2)
+
+configfile: "config.yaml"
+workdir: config['working_dir']
+
+#print(config['field_ID'])
+
+#=== Rules ===
 rule all:
     input:
-        'final.ms'
-        
+        '{0:s}/final.ms'.format(config['output_dir'])
+
+rule create_config:
+    input:
+        #'{0:s}/pointing.npz'.format(DATA_DIR),
+        '{0:s}/pointing.npz'.format(config['data_dir']),
+        '{0:s}/input.ms'.format(config['data_dir'])
+    output:
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+    params:
+        output_dir = config['output_dir']
+    shell:
+        'touch {params.output_dir}/chgcentre.cfg'
+
 rule split_calibrators:
     input:
-        'input.ms'
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
     output:
-        'calibrators.ms'
+        directory('{0:s}/calibrators.ms'.format(config['output_dir']))
+    params:
+        output_dir = config['output_dir']
+    shell:
+        'mkdir {params.output_dir}/calibrators.ms'
+
+rule split_OTF_scans_by_pointing:
+    input:
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+    output:
+        directory('{0:s}'.format(config['output_otf_dir']) +\
+                '/otf_pointing_no_{field_ID}.ms')
+    params:
+        a = access_wildcards,
+        output_otf_dir = config['output_otf_dir']
+    shell:
+        'mkdir {params.output_otf_dir}/otf_pointing_no_{params.a}.ms'
+
+rule rename_OTF_pointing:
+    input:
+        '{0:s}'.format(config['output_otf_dir']) +\
+        '/otf_pointing_no_{field_ID}.ms',
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+    output:
+        directory('{0:s}'.format(config['output_otf_dir']) +\
+                '/renamed_otf_pointing_no_{field_ID}.ms')
+    params:
+        output_otf_dir = config['output_otf_dir']
+    shell:
+        'mkdir {params.output_otf_dir}/renamed_otf_pointing_no_{wildcards.field_ID}.ms'    
+
+rule apply_phase_rotation:
+    input:
+        '{0:s}'.format(config['output_otf_dir']) +\
+        '/renamed_otf_pointing_no_{field_ID}.ms',
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+    output:
+        directory('{0:s}'.format(config['output_otf_dir']) +\
+            '/chgcentre_otf_pointing_no_{field_ID}.ms')
+    params:
+        output_otf_dir = config['output_otf_dir']
+    shell:
+        'mkdir {params.output_otf_dir}/chgcentre_otf_pointing_no_{wildcards.field_ID}.ms'
+
+rule merge_scan_and_target:
+    input:
+        #directory(expand('chgcentre_otf_pointing_no_{field_ID}.ms', field_ID=FIELDS)),
+        expand('{0:s}'.format(config['output_otf_dir']) +\
+                '/chgcentre_otf_pointing_no_{field_ID}.ms', field_ID=config['field_ID']),
+        '{0:1}/calibrators.ms'.format(config['output_dir'])
+    output:
+        directory('{0:s}/final.ms'.format(config['output_dir']))
+    params:
+        output_dir = config['output_dir']
+    shell:
+        'mkdir {params.output_dir}/final.ms'

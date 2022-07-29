@@ -1,0 +1,21 @@
+working_dir:
+    '/home/krozgonyi/arcane-suite/workflows/ms2otfms/workflow'
+
+data_dir:
+    '/home/krozgonyi/arcane-suite/workflows/ms2otfms/workflow/input'
+
+output_dir:
+    '/home/krozgonyi/arcane-suite/workflows/ms2otfms/workflow/results'
+
+output_otf_dir:
+    '/home/krozgonyi/arcane-suite/workflows/ms2otfms/workflow/results/otf_pointings'
+
+field_ID:
+    - 0
+    - 1
+    
+#An auto-generated command that will be called by the create_config rule,
+#to make sure that the pipeline config generated and the config for other commands
+#to be generated are compatible (given that the input data haven't changed)
+config_params:
+    'some command'
