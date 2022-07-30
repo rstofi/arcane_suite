@@ -1,3 +1,6 @@
+#Added by me by hgand: ingnoring .snakemake directories
+*.snakemake/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
