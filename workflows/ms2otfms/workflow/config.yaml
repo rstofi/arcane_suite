@@ -10,9 +10,14 @@ output_dir:
 output_otf_dir:
     '/home/krozgonyi/arcane-suite/workflows/ms2otfms/workflow/results/otf_pointings'
 
+log_dir:
+    '/home/krozgonyi/arcane-suite/workflows/ms2otfms/workflow/logs'
+
 field_ID:
     - 0
     - 1
+    #0 : a
+    #1 : b
     
 #An auto-generated command that will be called by the create_config rule,
 #to make sure that the pipeline config generated and the config for other commands
