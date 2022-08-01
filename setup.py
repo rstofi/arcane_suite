@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-setup(name = 'arcane-suite',
+setup(name = 'arcane_suite',
 	version = '0.0.1',
 	license = 'GPLv3',
 	description = 'arcane_suite is an arbitrary set of radio astronomical pipelines using the Snakemake workflow manager.',
@@ -8,7 +8,7 @@ setup(name = 'arcane-suite',
 	author = 'Kristof Rozgonyi',
 	author_email = 'Kristof.Rozgonyi@physik.uni-muenchen.de',
 	packages = [
-        "src"
+        "src/arcane_suite"
     ],
     install_requires = [
     	"numpy>=1.22.0"
@@ -19,7 +19,7 @@ setup(name = 'arcane-suite',
     ],
     entry_points = {
         'console_scripts': [
-     		#Here comes the command-line executable scripts
+     		'init_otfms=src.init_otfms:main'
         ],
     },
 )
