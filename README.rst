@@ -1,4 +1,4 @@
-Arbitrary Radio astronomiCAl pipeliNE suite (arcane-suite)
+Arbitrary Radio astronomiCAl pipeliNE suite (arcane_suite)
 ==========================================================
 
 Many radio astronomical pipelines are data-driven, yet emberassingly parallel and simple at the same time. arcane-suite is a set of *arbitrary* `Snakemake <https://snakemake.github.io/>`_ pipelines that can be easily deployed and run based on user-defined configuration files.

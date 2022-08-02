@@ -1,5 +1,9 @@
 from setuptools import setup, find_packages
 
+
+setup()
+
+"""
 setup(name = 'arcane_suite',
 	version = '0.0.1',
 	license = 'GPLv3',
@@ -23,3 +27,4 @@ setup(name = 'arcane_suite',
         ],
     },
 )
+"""

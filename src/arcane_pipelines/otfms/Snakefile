@@ -1,0 +1,125 @@
+"""Sankefile
+"""
+
+import numpy as np
+
+#=== Configuration ===
+#WORKING_DIR = os.getcwd()
+
+#DATA_DIR = WORKING_DIR + '/input'
+#RESULTS_DIR = WORKING_DIR + '/results'
+
+def access_wildcards(wildcards):
+    #This runs the function even during dry runs
+    print(wildcards.field_ID)
+    print(type(wildcards.field_ID))
+
+    #return str(int(wildcards.field_ID) + 1)
+    return wildcards.field_ID
+
+#workdir: WORKING_DIR
+#FIELDS=range(0,2)
+
+configfile: "config.yaml"
+workdir: config['working_dir']
+
+#print(config['field_ID'])
+#print(type(config['field_ID']['1']))
+
+#=== Rules ===
+rule all:
+    input:
+        '{0:s}/final.ms'.format(config['output_dir'])
+
+rule create_config:
+    input:
+        '{0:s}/pointing.npz'.format(config['data_dir']),
+        '{0:s}/input.ms'.format(config['data_dir'])
+    output:
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+    log:
+        '{0:s}/crete_config.log'.format(config['log_dir'])
+    params:
+        output_dir = config['output_dir'],
+        log_dir = config['log_dir']
+    shell:
+        'touch {params.output_dir}/chgcentre.cfg && touch {params.log_dir}/crete_config.log'
+
+rule split_calibrators:
+    input:
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+    output:
+        directory('{0:s}/calibrators.ms'.format(config['output_dir']))
+    log:
+        '{0:s}/split_calibrators.log'.format(config['log_dir'])
+    params:
+        output_dir = config['output_dir'],
+        log_dir = config['log_dir']
+    shell:
+        'mkdir {params.output_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
+
+rule split_OTF_scans_by_pointing:
+    input:
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+    output:
+        directory('{0:s}'.format(config['output_otf_dir']) +\
+                '/otf_pointing_no_{field_ID}.ms')
+    log:
+        '{0:s}'.format(config['log_dir']) +\
+        '/otf_pointing_no_{field_ID}_split.log'
+    params:
+        output_otf_dir = config['output_otf_dir'],
+        log_dir = config['log_dir']
+    shell:
+        'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms' +\
+        ' && touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log'
+
+rule rename_OTF_pointing:
+    input:
+        '{0:s}'.format(config['log_dir']) +\
+        '/otf_pointing_no_{field_ID}_split.log',
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+    output:
+        directory('{0:s}'.format(config['output_otf_dir']) +\
+                '/otf_pointing_no_{field_ID}.ms')
+    log:
+        '{0:s}'.format(config['log_dir']) +\
+        '/otf_pointing_no_{field_ID}_renaming.log'
+    params:
+        output_otf_dir = config['output_otf_dir'],
+        log_dir = config['log_dir']
+    shell:
+        'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
+        ' && touch {params.log_dir}/renamed_otf_pointing_no_{wildcards.field_ID}_renaming.log'
+
+rule apply_phase_rotation:
+    input:
+        '{0:s}'.format(config['log_dir']) +\
+        '/otf_pointing_no_{field_ID}_renaming.log',
+        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+    output:
+        directory('{0:s}'.format(config['output_otf_dir']) +\
+            '/otf_pointing_no_{field_ID}.ms')
+    params:
+        output_otf_dir = config['output_otf_dir'],
+        log_dir = config['log_dir']
+    log:
+        '{0:s}'.format(config['log_dir']) +\
+        '/otf_pointing_no_{field_ID}_chgcentre.log'
+    shell:
+        'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
+        ' && touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log'
+
+rule merge_scan_and_target:
+    input:
+        expand('{0:s}'.format(config['log_dir']) +\
+        '/otf_pointing_no_{field_ID}_chgcentre.log', field_ID=config['field_ID']),
+        '{0:1}/calibrators.ms'.format(config['output_dir'])
+    output:
+        directory('{0:s}/final.ms'.format(config['output_dir']))
+    log:
+        '{0:s}/merge_scan_and_target.log'.format(config['log_dir'])
+    params:
+        output_dir = config['output_dir']
+    shell:
+        'mkdir {params.output_dir}/final.ms'
