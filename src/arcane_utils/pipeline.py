@@ -1,4 +1,4 @@
-"""Collection of utility functions general to initialising and handling pipelines
+"""Collection of utility functions general to initializing and handling pipelines
 """
 
 __all__ = ['argflatten', 'get_common_env_variables']
@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 #=== Functions ===
 def argflatten(arg_list):
     """Some argparser list arguments can be actually list of lists.
-    This is a simple routine to faltten list of lists to a simple list.
+    This is a simple routine to flatten list of lists to a simple list.
 
     Parameters
     ==========
@@ -30,7 +30,19 @@ def argflatten(arg_list):
     return [p for sublist in arg_list for p in sublist]
 
 def get_common_env_variables(config_path):
-	"""
+	"""Read environmental variables common across ALL pipelines of arcane-suite
+    during initialization
+
+    Parameters
+    ==========
+    config_path: str
+        Path to the config file initializing the pipeline
+    
+    Return
+    ======
+    working_dir: str
+        Path to the working directory in which the pipeline will be initialized
+
 	"""
 	config = configparser.ConfigParser()
 	config.read(config_path)

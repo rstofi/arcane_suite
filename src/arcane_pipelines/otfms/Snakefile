@@ -33,8 +33,8 @@ rule all:
 
 rule create_config:
     input:
-        '{0:s}/pointing.npz'.format(config['data_dir']),
-        '{0:s}/input.ms'.format(config['data_dir'])
+        '{0:s}'.format(config['pointing_ref']),
+        '{0:s}'.format(config['MS'])
     output:
         '{0:s}/chgcentre.cfg'.format(config['output_dir'])
     log:
