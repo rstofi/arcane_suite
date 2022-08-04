@@ -8,6 +8,7 @@ import logging
 import argparse
 import gc
 import datetime
+import numpy as np
 
 from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
@@ -102,11 +103,13 @@ def main():
     #=== Read the data sub selection from the config file
     logger.info('Solving for OTF field initialization...')
 
+    MS = ms_wrapper.create_MS_table_object(MS_path)
+
     calibrator_list, target_field_list, timerange, scans = \
                     otf_pointing.get_data_selection_from_config(args.config_file)
 
     #Check if calibrator and target fields are in the MS
-    field_Name_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS_path, close=True)
+    field_Name_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS, close=False)
 
     for calibrator in calibrator_list:
         if calibrator not in field_Name_ID_dict.keys():
@@ -116,9 +119,9 @@ def main():
         if target not in field_Name_ID_dict.keys():
             raise ValueError("Target field '{0:s}' not found in the input MS!".format(target))
  
-    #Check for data selection
+    #Check for scan data selection
     if scans != None:
-        field_scan_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS_path, scan_ID=True, close=True)
+        field_scan_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS, scan_ID=True, close=False)
 
         target_field_scans = []
 
@@ -127,9 +130,24 @@ def main():
 
         for sID in scans:
             if sID not in target_field_scans:
-                print(field_scan_dict)
-                print(target_field_scans)
                 raise ValueError('Target field(s) have no scan {0:d}'.format(sID))
+
+        #Get times
+        times = ms_wrapper.get_time_based_on_field_names_and_scan_IDs(MS,
+                    target_field_list, target_field_scans, close=False)
+
+    else:
+        #Get times
+        times = ms_wrapper.get_time_based_on_field_names(MS, target_field_list, close=False)
+            
+
+
+    otf_pointings = np.size(np.unique(times))
+
+
+    logger.info('{0:d} OTF pointings selected'.format(otf_pointings))
+
+    ms_wrapper.close_MS_table_object(MS)
 
     #=== Create pipeline
     logger.info('Building Snakemake pipeline...')

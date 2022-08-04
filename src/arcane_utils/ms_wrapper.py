@@ -211,7 +211,7 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath, scan_ID=False, close=False):
 
         return fieldname_ID_dict
 
-def get_time_based_on_field_names(mspath, field_name):
+def get_time_based_on_field_names(mspath, field_names, close=False):
     """Get an array containing the time values for a given field.
 
     NOTE that the times are not necessarily continous!
@@ -221,8 +221,8 @@ def get_time_based_on_field_names(mspath, field_name):
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
 
-    field_name: str
-        The `NAME` in the 'FIELSD' Table
+    field_name: list of strings
+        The list of the selected `NAME` values in the 'FIELSD' Table
 
     Returns
     =======
@@ -230,12 +230,16 @@ def get_time_based_on_field_names(mspath, field_name):
         An array containing the time values in the MS' native encoding (!)
 
     """
+    if type(field_names) != list:
+        raise TypeError('Wrong format for input field names!')
+
     MS = create_MS_table_object(mspath)
 
     field_Name_ID_dict = get_fieldname_and_ID_list_dict_from_MS(mspath)
 
     #Select the field name(s)
-    field_selection_string = misc.convert_list_to_string(list(field_Name_ID_dict[field_name]))
+    field_selection_string = misc.convert_list_to_string(
+                    [field_Name_ID_dict[field_name] for field_name in field_names])
 
     time_qtable = MS.query(query='FIELD_ID IN {0:s}'.format(
                         field_selection_string),
@@ -243,11 +247,12 @@ def get_time_based_on_field_names(mspath, field_name):
 
     times = time_qtable.getcol('TIME')
     
-    close_MS_table_object(MS)
+    if close:
+        close_MS_table_object(MS)
 
     return times
 
-def get_time_based_on_field_names(mspath, field_name):
+def get_time_based_on_field_names_and_scan_IDs(mspath, field_names, scan_IDs, close=False):
     """Get an array containing the time values for a given field.
 
     NOTE that the times are not necessarily continous!
@@ -257,8 +262,11 @@ def get_time_based_on_field_names(mspath, field_name):
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
 
-    field_name: str
-        The `NAME` in the 'FIELSD' Table
+    field_name: list of str
+        The list of the selected `NAME` values in the 'FIELSD' Table
+
+    scan_IDs: list of str
+        The list of the selected `FIELD_ID`'s
 
     Returns
     =======
@@ -266,25 +274,35 @@ def get_time_based_on_field_names(mspath, field_name):
         An array containing the time values in the MS' native encoding (!)
 
     """
+    if type(field_names) != list:
+        raise TypeError('Wrong format for input field names!')
+
+    if type(scan_IDs) != list:
+        raise TypeError('Wrong format for input scan IDs!')
+
+
     MS = create_MS_table_object(mspath)
 
     field_Name_ID_dict = get_fieldname_and_ID_list_dict_from_MS(mspath)
 
-    #Select the field name(s)
-    field_selection_string = misc.convert_list_to_string(list(field_Name_ID_dict[field_name]))
 
-    time_qtable = MS.query(query='FIELD_ID IN {0:s}'.format(
-                        field_selection_string),
+    #Select the field ID based on the name(s)
+    field_selection_string = misc.convert_list_to_string(
+                    [field_Name_ID_dict[field_name] for field_name in field_names])
+
+    #Select the scna ID's
+    scan_selection_string = misc.convert_list_to_string(scan_IDs)
+
+    time_qtable = MS.query(query='FIELD_ID IN {0:s} AND SCAN_NUMBER IN {1:s}'.format(
+                        field_selection_string, scan_selection_string),
                         columns='TIME')
 
     times = time_qtable.getcol('TIME')
     
-    close_MS_table_object(MS)
+    if close:
+        close_MS_table_object(MS)
 
     return times
-
-
-
 
 #=== MAIN ===
 if __name__ == "__main__":
