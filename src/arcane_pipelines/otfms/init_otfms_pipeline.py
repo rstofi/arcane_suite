@@ -289,13 +289,6 @@ def main():
     #=== Test if build was succesfull ===
     logger.info('Test pipeline build and create workflow DAG...')
 
-    #=== Garbage collection
-    logger.debug('Cleaning up...')
-    
-    collected = gc.collect()
-    logger.debug("Garbage collector: collected",
-          "%d objects." % collected)
-
     #=== Exit
     logger.info('Pipeline created')
     sys.exit(0)
