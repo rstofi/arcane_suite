@@ -9,9 +9,12 @@ import argparse
 import gc
 import datetime
 import numpy as np
+import copy
 
 from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
+from arcane_utils import time as a_time
+
 from arcane_pipelines.otfms import otf_pointing
 
 #=== Set logging
@@ -105,11 +108,14 @@ def main():
 
     MS = ms_wrapper.create_MS_table_object(MS_path)
 
-    calibrator_list, target_field_list, timerange, scans = \
+    calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID = \
                     otf_pointing.get_data_selection_from_config(args.config_file)
 
     #Check if calibrator and target fields are in the MS
-    field_Name_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS, close=False)
+    field_Name_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS,
+                                                            ant1_ID = ant1_ID,
+                                                            ant2_ID = ant2_ID,
+                                                            close=False)
 
     for calibrator in calibrator_list:
         if calibrator not in field_Name_ID_dict.keys():
@@ -121,7 +127,11 @@ def main():
  
     #Check for scan data selection
     if scans != None:
-        field_scan_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS, scan_ID=True, close=False)
+        field_scan_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS,
+                                                            scan_ID=True,
+                                                            ant1_ID = ant1_ID,
+                                                            ant2_ID = ant2_ID,
+                                                            close=False)
 
         target_field_scans = []
 
@@ -134,18 +144,39 @@ def main():
 
         #Get times
         times = ms_wrapper.get_time_based_on_field_names_and_scan_IDs(MS,
-                    target_field_list, target_field_scans, close=False)
+                    field_names = target_field_list,
+                    scan_IDs = scans,
+                    to_UNIX = True,
+                    ant1_ID = ant1_ID,
+                    ant2_ID = ant2_ID,
+                    close=False)
 
     else:
         #Get times
-        times = ms_wrapper.get_time_based_on_field_names(MS, target_field_list, close=False)
-            
+        times = ms_wrapper.get_time_based_on_field_names_and_scan_IDs(MS,
+                    field_names = target_field_list,
+                    scan_IDs = None,
+                    to_UNIX = True,
+                    ant1_ID = ant1_ID,
+                    ant2_ID = ant2_ID,
+                    close=False)
+
+    if timerange != None:
+        #The format should be already checked when timerange was parsered
+        time_selection_start, time_selection_end = \
+        a_time.convert_casa_timerange_selection_to_unix_times(timerange)
+
+        selected_times = copy.deepcopy(a_time.subselect_timerange_from_times_array(times,
+                                        start_time = time_selection_start,
+                                        end_time = time_selection_end))
+
+    else:
+        selected_times = copy.deepcopy(times)
+
+    #TO DO: check if the times are in the ref_pointing_file!
 
 
-    otf_pointings = np.size(np.unique(times))
-
-
-    logger.info('{0:d} OTF pointings selected'.format(otf_pointings))
+    logger.info('{0:d} OTF pointings selected'.format(np.size(selected_times)))
 
     ms_wrapper.close_MS_table_object(MS)
 
@@ -180,9 +211,15 @@ def main():
         sconfig.write('pointing_ref:\n  {0:s}\n'.format(
                         pointing_ref_path))
 
+        #Build field_ID dict
         sconfig.write('field_ID:\n')
-        sconfig.write('  - 1\n')
-        sconfig.write('  - 2\n')
+        for i, unix_timestamp in zip(range(0,np.size(selected_times)), selected_times):
+            sconfig.write("  '{0:d}': {1:.4f}\n".format(i, unix_timestamp))
+
+
+        #sconfig.write('field_ID:\n')
+        #sconfig.write('  - 1\n')
+        #sconfig.write('  - 2\n')
 
     #=== Garbage collection
     logger.debug('Cleaning up...')

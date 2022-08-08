@@ -3,17 +3,20 @@ to be used across several pipelines of the suite.
 """
 
 __all__ = ['create_MS_table_object', 'close_MS_table_object', 'get_MS_subtable_path',
-        'get_fieldname_and_ID_list_dict_from_MS', 'get_time_based_on_field_names']
+        'get_fieldname_and_ID_list_dict_from_MS',
+        'get_time_based_on_field_names_and_scan_IDs']
 
 
 import sys
 import logging
 import numpy as np
+import warnings
 
 from casacore import tables as casatables
 
 from arcane_utils import misc
 from arcane_utils.globals import _ACK
+from arcane_utils import time as a_time
 
 #=== Set up logging
 logger = logging.getLogger(__name__)
@@ -127,24 +130,55 @@ def get_MS_subtable_path(mspath, subtable_name, close=False):
 
     return subtable_path
 
-def get_fieldname_and_ID_list_dict_from_MS(mspath, scan_ID=False, close=False):
+def get_fieldname_and_ID_list_dict_from_MS(mspath,
+                                        scan_ID = False,
+                                        close = False,
+                                        ant1_ID = 0,
+                                        ant2_ID = 1):
     """Generate the field name -- ID list pairs or with `scan_ID` set to True,
     the scan IDs returned instead of the field IDs, from an MS as a dictionary.
 
     This is a key function as each field/scan could be queued by it's ID
 
-    Thius is a core function in inspecting MS for field selection
+    This is a core function in inspecting MS for field selection
 
     NOTE: a field can have different ID's attached i.e. the OTZFDUMMY field in
             the CNSS data set. The same applies to scans obviously
 
-    NOTE: I am not 100% if this is how the MS works in terms of field ID's, but
-            based on tests, seems legit
+    NOTE: this routine is sub-optimal for scan IDs as it is working with the MAIN
+            table. It uses the informatiuon in the FIELD table for getting the 
+            fielkd names and IDs though.
+
+    NOTE: to **speed up** the code, I only select data associated with one baseline.
+        Since, I query the information from the MAIN table, for MS with hundreds of
+        GB size could be inefficient to read in a full column to memory, and slow
+        to work with later on. I *assume* that the native TAQL query language is
+        optimised solutioin for data selection. Therefore, the idea is to push
+        the heavy-lifting to TAQL, and only work with the sub-selected data.
 
     Parameters
     ==========
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
+
+    scan_ID: bool, opt
+        If True, the dictionary returned will contain the field names as keys and
+        the scan IDs as values, not the field IDs !
+
+    close:
+        If True the MS will be closed
+
+    ant1_ID: int, opt
+        The ID of a reference antenna used for the underlying TAQL query. This
+        parameter *should* not matter for the output, as the MAIN table has all
+        antennas associated with all scans and fields. However, in some cases,
+        when e.g. an MS is made out from multiple observations, where one is missing
+        an antenna, this parameter matters! Please be carefule na know your data
+        beforehand.
+    
+    ant2_ID: int, opt
+        The ID of the second antenna defining the baseline used for the selection. 
+        The same caveats as for `ref_ant_ID` applyes here.
 
     Returns
     =======
@@ -152,6 +186,9 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath, scan_ID=False, close=False):
         Dictionatry containing the field names and the corresponding field ID's
 
     """
+    if ant1_ID == ant2_ID:
+        raise ValueError('Only cross-correltion baselines are allowed for field and scan ID queryes!')
+
     MS = create_MS_table_object(mspath)
 
     fieldtable_path = get_MS_subtable_path(MS,'FIELD', close=False)
@@ -183,7 +220,7 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath, scan_ID=False, close=False):
     #The fieldname ID dict has to be creted to generate the scanname_ID_disct:
     if scan_ID:
         #NOTE this is a really slow sub-routine!
-        logger.warning('Matching scan IDs to FIELD_NAMES. This can take some time...')
+        logger.debug('Matching scan IDs to FIELD_NAMES. This can take some time...')
 
         scanname_ID_disct = {}
 
@@ -193,8 +230,11 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath, scan_ID=False, close=False):
 
             field_selection_string = misc.convert_list_to_string(list(fieldname_ID_dict[field_name]))
 
-            scan_qtable = MS.query(query='FIELD_ID IN {0:s}'.format(
-                        field_selection_string),
+            #Note that string formatting (number of whitespaces or tabs) does not matter
+            scan_qtable = MS.query(query='FIELD_ID IN {0:s} \
+                            AND ANTENNA1 == {1:d} \
+                            AND ANTENNA2 == {2:d}'.format(
+                        field_selection_string, ant1_ID, ant2_ID),
                         columns='SCAN_NUMBER')
 
             scanname_ID_disct[field_name] = list(np.unique(scan_qtable.getcol('SCAN_NUMBER')))
@@ -211,98 +251,131 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath, scan_ID=False, close=False):
 
         return fieldname_ID_dict
 
-def get_time_based_on_field_names(mspath, field_names, close=False):
-    """Get an array containing the time values for a given field.
+def get_time_based_on_field_names_and_scan_IDs(mspath,
+                                            field_names = None,
+                                            scan_IDs = None,
+                                            to_UNIX = True,
+                                            close = False,
+                                            ant1_ID = 0,
+                                            ant2_ID = 1):
+    """Get an array containing the time values for a given field and scan selection.
 
-    NOTE that the times are not necessarily continous!
+    This is the core function to get the TIME array for given fields and or scans.
+
+    If no field or scan specifyed, all the fields and scans are selected. Also, works
+    based on only field or scan ID selection.
+
+    The same caveats as in `get_fieldname_and_ID_list_dict_from_MS` are True for
+    the data selection used in this function.
+
+    *Only* WARNING is thrown if the returned data size is 0!
+
+    NOTE: the fields are defined by their names, while the scans are by their ID's!
+
+    NOTE: the times returned are not necessarily continous!
+
 
     Parameters
     ==========
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
 
-    field_name: list of strings
-        The list of the selected `NAME` values in the 'FIELSD' Table
+    field_name: list of str, opt
+        The list of the selected `NAME` values in the 'FIELSD' Table. If None, all
+        fields are selected.
 
-    Returns
-    =======
-    times: array of float
-        An array containing the time values in the MS' native encoding (!)
+    scan_IDs: list of str, opt
+        The list of the selected `SCAN_ID`s. If None, all scans are selected
 
-    """
-    if type(field_names) != list:
-        raise TypeError('Wrong format for input field names!')
-
-    MS = create_MS_table_object(mspath)
-
-    field_Name_ID_dict = get_fieldname_and_ID_list_dict_from_MS(mspath)
-
-    #Select the field name(s)
-    field_selection_string = misc.convert_list_to_string(
-                    [field_Name_ID_dict[field_name] for field_name in field_names])
-
-    time_qtable = MS.query(query='FIELD_ID IN {0:s}'.format(
-                        field_selection_string),
-                        columns='TIME')
-
-    times = time_qtable.getcol('TIME')
+    to_UNIX: bool, optional
+        If False, `TIME` in the native frame values (assumed to be MJD) are returned.
+        If True, the output is covrted to UNXI formatting (default).
     
-    if close:
-        close_MS_table_object(MS)
+    close:
+        If True the MS will be closed
 
-    return times
+    ant1_ID: int, opt
+        The reference entenna in the baseline used for query the MS
 
-def get_time_based_on_field_names_and_scan_IDs(mspath, field_names, scan_IDs, close=False):
-    """Get an array containing the time values for a given field.
-
-    NOTE that the times are not necessarily continous!
-
-    Parameters
-    ==========
-    mspath: str
-        The input MS path or a ``casacore.tables.table.table`` object
-
-    field_name: list of str
-        The list of the selected `NAME` values in the 'FIELSD' Table
-
-    scan_IDs: list of str
-        The list of the selected `FIELD_ID`'s
+    ant2_ID: int, opt
+        The other reference entenna in the baseline used for query the MS
 
     Returns
     =======
     times: array of float
-        An array containing the time values in the MS' native encoding (!)
+        An array containing the time values
 
     """
-    if type(field_names) != list:
+    if type(field_names) != list and field_names != None:
         raise TypeError('Wrong format for input field names!')
 
-    if type(scan_IDs) != list:
+    if type(scan_IDs) != list and scan_IDs != None:
         raise TypeError('Wrong format for input scan IDs!')
 
+    if ant1_ID == ant2_ID:
+        raise ValueError('Only cross-correltion baselines are allowed for time selecttion queryes!')
 
     MS = create_MS_table_object(mspath)
 
+    #This is fast
     field_Name_ID_dict = get_fieldname_and_ID_list_dict_from_MS(mspath)
 
+    #Get the field selection
+    if field_names == None:
+        field_selection_string = misc.convert_list_to_string(
+            [].extend(field_Name_ID_dict.keys()[0]))
+            #[field_Name_ID_dict[field_name][0] for field_name in field_Name_ID_dict.keys()])
+    
+    else:    
+        #Select the field ID based on the name(s)
+        field_selection_string = misc.convert_list_to_string(
+                        [field_Name_ID_dict[field_name][0] for field_name in field_names])
 
-    #Select the field ID based on the name(s)
-    field_selection_string = misc.convert_list_to_string(
-                    [field_Name_ID_dict[field_name] for field_name in field_names])
+    #Query the data based on the field and scan ID selection
+    if scan_IDs == None:
+        time_qtable = MS.query(query='FIELD_ID IN {0:s} \
+                                AND ANTENNA1 == {1:d} \
+                                AND ANTENNA2 == {2:d}'.format(
+                            field_selection_string, ant1_ID, ant2_ID),
+                            columns='TIME')
 
-    #Select the scna ID's
-    scan_selection_string = misc.convert_list_to_string(scan_IDs)
+    else:
+        #Select the scna ID's
+        scan_selection_string = misc.convert_list_to_string(scan_IDs)
 
-    time_qtable = MS.query(query='FIELD_ID IN {0:s} AND SCAN_NUMBER IN {1:s}'.format(
-                        field_selection_string, scan_selection_string),
-                        columns='TIME')
+        time_qtable = MS.query(query='FIELD_ID IN {0:s} \
+                                AND SCAN_NUMBER IN {1:s} \
+                                AND ANTENNA1 == {2:d} \
+                                AND ANTENNA2 == {3:d}'.format(
+                            field_selection_string, scan_selection_string,
+                            ant1_ID, ant2_ID),
+                            columns='TIME')
 
+    #Get the time values in the native format
     times = time_qtable.getcol('TIME')
     
+    if np.size(times) == 0:
+        warnings.warn('No TIME data is selected!')
+        logger.warning('No TIME data is selected!')
+
+    #Raise warning if not only unique times retrieved
+    elif np.size(times) != np.size(np.unique(times)):
+        logger.warning('Not only uniqe TIME data is selected, please check your MS and data selection!')
+
     if close:
         close_MS_table_object(MS)
 
-    return times
+    if to_UNIX:
+        #Do a 'soft' check for the input values to make sure UNIX format is returned
+        if a_time.soft_check_if_time_is_UNIX(a_time.convert_MJD_to_UNIX(times[0])):
+            return a_time.convert_MJD_to_UNIX(times)
+        elif a_time.soft_check_if_time_is_UNIX(times[0]):
+            return times
+        else:
+            raise ValueError('MS time formatting is not MJD or UNIX!')
+
+    else:
+        return times
 
 #=== MAIN ===
 if __name__ == "__main__":
