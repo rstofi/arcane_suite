@@ -2,12 +2,16 @@
 """
 
 __all__ = ['get_otfms_data_variables', 'get_otfms_data_selection_from_config',
-            'init_empty_config_for_otfms']
+            'init_empty_config_for_otfms', 'get_times_from_reference_pointing_file',
+            'get_pointing_from_reference_pointing_file',
+            'get_pointing_and_times_from_reference_pointing_file']
 
 import sys
 import logging
 import configparser
-import re
+import numpy as np
+
+from astropy.time import Time
 
 from arcane_utils import pipeline
 from arcane_utils import time as a_time
@@ -201,6 +205,91 @@ def get_otfms_data_selection_from_config(config_path):
             ant2_ID = 1
 
     return calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID
+
+def get_times_from_reference_pointing_file(refrence_pointing_npz):
+    """Get the `time` array from the reference antenna pointing
+    file. The file should be a numpy-generated .npz binary file (not pickled though!)
+
+    The time array should be in UNIX format
+
+    Parameters:
+    ===========
+    reference_pointing: str
+        The path to the .npz file
+
+    Returns:
+    ========
+    time_array: <numpy.ndArray>
+        The times in Unix format
+
+    """
+    #Get the time array
+    times = Time(np.load(refrence_pointing_npz)['time'], format='unix')
+
+    if a_time.soft_check_if_time_is_UNIX(times[0].value) == False:
+        logger.warning('Reference pointing times are not in UNIX format!')
+
+    time_array = times.value
+
+    return time_array
+
+def get_pointing_from_reference_pointing_file(refrence_pointing_npz):
+    """et the `ra` and `dec` arrays from the reference antenna pointing
+    file. The file should be a numpy-generated .npz binary file (not pickled though!)
+
+    The ra and dec arrays should be in degrees
+
+    Parameters:
+    ===========
+    reference_pointing: str
+        The path to the .npz file
+
+    Returns:
+    ========
+    ra_array: <numpy.ndArray>
+        The pointing RA value in degrees
+
+    dec_array: <numpy.ndArray>
+
+    """
+    ra_array = np.load(refrence_pointing_npz)['ra']
+    dec_array = np.load(refrence_pointing_npz)['dec']
+
+    return ra_array, dec_array
+
+
+def get_pointing_and_times_from_reference_pointing_file(refrence_pointing_npz):
+    """Get the `time`, `ra` and `dec` arrays from the reference antenna pointing
+    file. The file should be a numpy-generated .npz binary file (not pickled though!)
+
+    The time array should be in UNIX format
+
+    The ra and dec arrays should be in degrees
+
+    TO DO: add .csv/text file format support
+    
+    Parameters:
+    ===========
+    reference_pointing: str
+        The path to the .npz file
+
+    Returns:
+    ========
+    time_array: <numpy.ndArray>
+        The times in Unix format
+
+    ra_array: <numpy.ndArray>
+        The pointing RA value in degrees
+
+    dec_array: <numpy.ndArray>
+        The pointing Dec value in degrees
+
+    """
+    time_array = get_times_from_reference_pointing_file(refrence_pointing_npz)
+    ra_array, dec_array = \
+                get_pointing_from_reference_pointing_file(refrence_pointing_npz)
+
+    return time_array, ra_array, dec_array
 
 #=== MAIN ===
 if __name__ == "__main__":

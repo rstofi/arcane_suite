@@ -231,14 +231,56 @@ def convert_unix_times_to_casa_timerange_selection(start_unix_time, end_unix_tim
     return casa_timerange_selection_string
 
 def subselect_timerange_from_times_array(times_array, start_time, end_time):
+    """Select values from a UNIX time array in between the `start_time` and
+    `end_time`
+
+    
+    Parameters:
+    ===========
+    times_array: list of float
+        The array to subselect from
+
+    start_time: float
+        The first allowed time for the sub-selection
+
+    end_time: float
+        The last allowed time for the sub selection
+
+    Returns:
+    ========
+    A sub-selection of the `times_array` in between the `start_time` and `end_time`
+
     """
-    """
+    if start_time > end_time:
+        raise ValueError('Invalid time selection boundaries!')
 
     if start_time > np.max(times_array) or end_time < np.min(times_array):
         raise ValueError('Invalid timerange selection')
 
     return np.array(times_array[np.where((times_array >= start_time) & (times_array <= end_time))])
 
+def time_arrays_intersection(t1_array, t2_array, threshold=0.0001):
+    """
+    """
+
+    #For already sorted arrays numpy is super fast allegedly...
+    #So first, chek if input arrays are sorted:
+    is_sorted = lambda a: np.all(a[:-1] <= a[1:]) #This is O(n)
+
+    #TO DO: raise warning if the arrays are to large e.g. >10e+5 or something
+
+    #Sort if not sorted
+    if is_sorted(t1_array) == False:
+        t1_array = np.sort(t1_array)
+
+    if is_sorted(t2_array) == False:
+        t2_array = np.sort(t2_array)
+    
+
+    #If the two arrays have the same size we can just loop trough them
+
+
+    #If the arrays have the same size, just use the smaller one for the nested loops
 
 
 #=== MAIN ===

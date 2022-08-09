@@ -242,11 +242,24 @@ def main():
     #Close MS
     ms_wrapper.close_MS_table_object(MS)
 
-    #TO DO: throw error if no otf pointings are selected
+    #This case is only if the selected timerange is smaller than the viaibility sampling interval
+    if np.size(selected_times) == 0:
+        raise ValueError('No OTF pointing matches the data selection criteria!')
 
-    #TO DO: check if the times are in the ref_pointing_file!
+    #Reading in the pointing reference file (existence already checked)
+    pointing_times = otf_pointing.get_times_from_reference_pointing_file(pointing_ref_path)
 
+    #Generate selected-only values from the pointing array
+    selected_pointing_times = copy.deepcopy(a_time.subselect_timerange_from_times_array(times,
+                                        start_time = time_selection_start,
+                                        end_time = time_selection_end))
+
+    #Now get the cross matching
+
+
+    #TO DO: fix this log message
     logger.info('{0:d} OTF pointings selected'.format(np.size(selected_times)))
+    logger.info('{0:d} OTF pointings selected'.format(np.size(selected_pointing_times)))
 
     ms_wrapper.close_MS_table_object(MS)
 
