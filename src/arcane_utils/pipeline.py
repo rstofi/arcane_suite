@@ -57,7 +57,7 @@ def remove_comment(arg_string, comment_character='#'):
     return arg_string.split(comment_character)[0]
 
 def get_common_env_variables(config_path):
-	"""Read environmental variables common across ALL pipelines of arcane-suite
+    """Read environmental variables common across ALL pipelines of arcane-suite
     during initialization
 
     Parameters
@@ -70,13 +70,18 @@ def get_common_env_variables(config_path):
     working_dir: str
         Path to the working directory in which the pipeline will be initialized
 
-	"""
-	config = configparser.ConfigParser()
-	config.read(config_path)
+    """
+    config = configparser.ConfigParser()
+    config.read(config_path)
 
-	working_dir = config.get('ENV','working_dir')
+    working_dir = config.get('ENV','working_dir')
 
-	return working_dir
+    working_dir = remove_comment(working_dir).strip()
+
+    if working_dir == '':
+        raise ValueError('Missing mandatory parameter: working_dir')
+
+    return working_dir
 
 def init_empty_config_file_with_common_variables(template_path,
                                                 pipeline_name,
@@ -113,8 +118,7 @@ arcane-suit at {1:s}\n'.format(pipeline_name, str(datetime.datetime.now())))
 
         aconfig.write('\n[ENV]\n')
 
-        aconfig.write(f"{'working_dir':<30}" + '= #mandatory\n')
-
+        aconfig.write(f"{'working_dir':<30}" + f"{'= ':<5}" + '#Mandatory, path\n')
 
 #=== MAIN ===
 if __name__ == "__main__":

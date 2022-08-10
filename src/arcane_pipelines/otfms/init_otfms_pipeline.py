@@ -311,6 +311,8 @@ def main():
                         MS_path))
         sconfig.write('pointing_ref:\n  {0:s}\n'.format(
                         pointing_ref_path))
+        sconfig.write('time_crossmatch_threshold:\n  {0:.8f}\n'.format(
+                        time_crossmatch_threshold))
 
         #Build field_ID dict
         sconfig.write('otf_field_ID_mapping:\n')
@@ -319,7 +321,7 @@ def main():
                                         cross_matched_reference_times[i]))
 
     #=== Test if build was succesfull ===
-    logger.info('Testing pipeline via dry run...')
+    logger.info('Testing pipeline setup via dry run...')
 
     #Snakemake dry run (also creates a .snakemake hidden directory under the working_dir)
     snakemake_proc = subprocess.run('cd {0:s};  snakemake -np'.format(working_dir),
