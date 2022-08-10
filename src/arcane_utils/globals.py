@@ -5,6 +5,7 @@
 global _ACK 
 _ACK = False
 
+#---------------------------------------------------
 #Define the indices for the correlator types in MSv2.
 #
 #See e.g.: https://github.com/SKA-ScienceDataProcessor/algorithm-reference-library/
@@ -13,7 +14,7 @@ _ACK = False
 # 1-4: Stokes polarization frame
 # 5-8: Circular polarization frame
 # 9-12: Linear polarization frame
-#
+#----------------------------------------------------
 global _MSV2_CORR_TYPE_DICT
 _MSV2_CORR_TYPE_DICT = {1:'I',
                         2:'Q',

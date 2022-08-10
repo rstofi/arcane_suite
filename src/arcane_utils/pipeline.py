@@ -1,7 +1,7 @@
 """Collection of utility functions general to initializing and handling pipelines
 """
 
-__all__ = ['argflatten', 'get_common_env_variables',
+__all__ = ['argflatten', 'get_common_env_variables', 'remove_comment',
             'init_empty_config_file_with_common_variables']
 
 
@@ -20,29 +20,53 @@ def argflatten(arg_list):
     This is a simple routine to flatten list of lists to a simple list.
 
     Parameters
-    ==========
+    ----------
     arg_list: list of lists
         Value of a list argument needs to be flatten
     
-    Return
-    ======
+    Returns
+    -------
     arg_as_list: list
         The flattened list of lists
     
     """
     return [p for sublist in arg_list for p in sublist]
 
+def remove_comment(arg_string, comment_character='#'):
+    """Remove a comment from a string, where the comment is the end of the string
+    and starts with the `comment_character`. This is useful to handle argparse
+    arguments with comments
+
+    The `comment_character` is # by default!
+
+    NOTE: this gonna cause problems if the arparse input string contains a # character!
+
+    Parameters
+    ----------
+    arg_string: str
+        String to remove the comment from
+
+    comment_character: str
+        A character indicating the beginning of the comment
+
+    Returns
+    -------
+    The string without the comment
+
+    """
+    return arg_string.split(comment_character)[0]
+
 def get_common_env_variables(config_path):
 	"""Read environmental variables common across ALL pipelines of arcane-suite
     during initialization
 
     Parameters
-    ==========
+    ----------
     config_path: str
         Path to the config file initializing the pipeline
     
-    Return
-    ======
+    Returns
+    -------
     working_dir: str
         Path to the working directory in which the pipeline will be initialized
 
@@ -60,8 +84,8 @@ def init_empty_config_file_with_common_variables(template_path,
     """Initialise config file that can be used as a basis for other code to expand
     into an empty template config file.
 
-    Parameters:
-    ===========
+    Parameters
+    ----------
     template_path: str
         Path and name of the template created
 
@@ -71,8 +95,8 @@ def init_empty_config_file_with_common_variables(template_path,
     overwrite: bool, opt
         If True the input file is overwritten, othervise an error is thrown
 
-    Returns:
-    ========
+    Returns
+    -------
     Create a template config file
 
     """

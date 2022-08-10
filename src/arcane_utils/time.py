@@ -26,16 +26,16 @@ def convert_MJD_to_UNIX(time_array):
     MJD is the default time format in most MS, but it is more convienient to
     work with UNIX time
 
-    Parameters:
-    ===========
-
-    time_array: <numpy.ndarray>
+    Parameters
+    ----------
+    time_array: numpy array of float
         The numpy array containing the time values in MJD format
 
-    Returns:
-    ========
-    unix_time_array: <numpy.ndarray>
+    Returns
+    -------
+    unix_time_array: numpy array of float
         The numpy array containing the time values in UNIX format
+
     """
     #Conversion
     unix_time_array = Time(time_array / 86400, format='mjd')
@@ -54,13 +54,13 @@ def soft_check_if_time_is_UNIX(time_val):
     NOTE: the current time is measured in UTC zero timezone (i.e. UNIX standard),
         it is not the 'real' local time.
 
-    Parameters:
-    ===========
+    Parameters
+    ----------
     time_val: float
         The time value to be checked
 
-    Returns:
-    ========
+    Returns
+    -------
     True if `time_val` could be the time in UNIX format for a radio observation and
     False if not
 
@@ -91,13 +91,13 @@ def casa_datetime_to_unix_time(casa_date_string):
         
         astropy_Time = Time.strptime(casa_date_string, '%Y/%m/%d/%H:%M:%S')
     
-    Parameters:
-    ===========
+    Parameters
+    ----------
     casa_date_string: str
         The time string in CASA format
 
-    Returns:
-    ========
+    Returns
+    -------
     Time value in UNIX representation
 
     """
@@ -124,13 +124,13 @@ def unix_time_to_casa_datetime(unix_time_val):
 
         casa_format_string = astropy_Time.strftime('%Y/%m/%d/%H:%M:%S')
 
-    Parameters:
-    ===========
+    Parameters
+    ----------
     unix_time_val: float
         Time value in UNIX representation
 
-    Returns:
-    ========
+    Returns
+    -------
     The time string in CASA format
 
 
@@ -166,13 +166,13 @@ def convert_casa_timerange_selection_to_unix_times(selection_string):
 
     yyyy/mm/dd/hh:mm:ss.ss~yyyy/mm/dd/hh:mm:ss.ss
 
-    Parameters:
-    ===========
+    Parameters
+    ----------
     selection_string: str
         The timerange selection string in CASA format
 
-    Returns:
-    ========
+    Returns
+    -------
     start_unix_time: float
         Start value in UNIX representation
     
@@ -204,16 +204,16 @@ def convert_unix_times_to_casa_timerange_selection(start_unix_time, end_unix_tim
 
     yyyy/mm/dd/hh:mm:ss.ss~yyyy/mm/dd/hh:mm:ss.ss
 
-    Parameters:
-    ===========
+    Parameters
+    ----------
     start_unix_time: float
         Start value in UNIX representation
     
     end_unix_time: float
         End value in UNIX representation
     
-    Returns:
-    ========
+    Returns
+    -------
     casa_timerange_selection_string: str
         The timerange selection string in CASA format
 
@@ -234,10 +234,9 @@ def subselect_timerange_from_times_array(times_array, start_time, end_time):
     """Select values from a UNIX time array in between the `start_time` and
     `end_time`
 
-    
-    Parameters:
-    ===========
-    times_array: list of float
+    Parameters
+    ----------
+    times_array: numpy array of float
         The array to subselect from
 
     start_time: float
@@ -246,8 +245,8 @@ def subselect_timerange_from_times_array(times_array, start_time, end_time):
     end_time: float
         The last allowed time for the sub selection
 
-    Returns:
-    ========
+    Returns
+    -------
     A sub-selection of the `times_array` in between the `start_time` and `end_time`
 
     """
@@ -257,31 +256,101 @@ def subselect_timerange_from_times_array(times_array, start_time, end_time):
     if start_time > np.max(times_array) or end_time < np.min(times_array):
         raise ValueError('Invalid timerange selection')
 
-    return np.array(times_array[np.where((times_array >= start_time) & (times_array <= end_time))])
+    return np.array(times_array[np.where((times_array >= start_time) \
+                                        & (times_array <= end_time))])
 
-def time_arrays_intersection(t1_array, t2_array, threshold=0.0001):
-    """
-    """
+def time_arrays_injective_intersection(t1_array, t2_array, threshold=0.0001, quick_subselect=True):
+    """Function to find all time values that are the same within a given threshold
+    in two time-series array. This is a general function, and so the arrays does
+    not have to be continous or ordered. They have to be in some float format,
+    preferably UNIX
 
+    NOTE: this code is pretty slow on large arrays as it goes with O(n^2) if the
+            input arrays have the same size of n
+
+    The code only works for injective (1:1) time value correspondance between the
+    two input arrays. Ergo, if any value from an array is closer than the threshold
+    value to more than one element in the other array, the code shits the bed and
+    throws an error.
+
+    Parameters
+    ----------
+    t1_array: numpy array of float
+        The first time series array
+
+    t2_array: numpy array of float
+        The second time series array
+
+    threshold: float, optional
+        The threshold value which below the difference of two tme values is set
+        to be 0 in the cross-matching process
+
+    quick subselect: bool, optional
+        If True, both input arrays are cut down based on the time intersection interval
+        True by defalut to speed up processing random time arrays, but can be disabled
+        if the input arrays already spanning the same timerange
+
+    Returns
+    -------
+    common_times: numpy array of float
+        Time values from the *`t1_array`* which have a single corresponding value
+        in `t2_array`
+
+    """
+    #In a general case the two arrays can be arbitrary size and spanning random intervals
+
+    #Basically select only the time intersection values from the two arrays
+    if quick_subselect:
+        common_min = np.max(np.array([np.min(t1_array), np.min(t2_array)])) - threshold
+        common_max = np.min(np.array([np.max(t1_array), np.max(t2_array)])) + threshold
+
+        t1_array = subselect_timerange_from_times_array(t1_array, common_min, common_max)
+        t2_array = subselect_timerange_from_times_array(t2_array, common_min, common_max)
+
+    #TO DO: raise warning if the arrays are to large e.g. >10e+5 or something
+
+    #This only needed if we try to be lever...
+    """
+    #Sort if not sorted
     #For already sorted arrays numpy is super fast allegedly...
     #So first, chek if input arrays are sorted:
     is_sorted = lambda a: np.all(a[:-1] <= a[1:]) #This is O(n)
 
-    #TO DO: raise warning if the arrays are to large e.g. >10e+5 or something
-
-    #Sort if not sorted
     if is_sorted(t1_array) == False:
         t1_array = np.sort(t1_array)
 
     if is_sorted(t2_array) == False:
         t2_array = np.sort(t2_array)
+    """
     
+    #We are not trying to be lever and will brute-forec the problem as it can handle
+    # ALL possibilities
+    common_times = []
 
-    #If the two arrays have the same size we can just loop trough them
+    #Loop through the rows of an imaginary boolean matrix with (N_t1, N_t2) size,
+    #where each (i,j) element is True, if t1[i] - t2[j] < threshold and False otherwise
 
+    #In case the arrays have repeated values
+    t1_array = np.unique(t1_array)
+    t2_array = np.unique(t2_array)
 
-    #If the arrays have the same size, just use the smaller one for the nested loops
+    for i in range(0,np.size(t1_array)):
+        match_sum = np.sum(np.where(np.fabs(np.subtract(t2_array, t1_array[i])) < threshold, True, False).astype(bool))
 
+        #For check if multiple t2 values match with a single t1 value
+        if match_sum > 1:
+            raise ValueError('Not injective time array value matching!')
+        elif match_sum == 1:
+            common_times.append(t1_array[i])
+
+    del i, match_sum
+
+    #Check if multiple t1 values returned as there is multiple match with a single t2 value
+    common_times = np.array(common_times)
+    if np.size(np.unique(common_times)) != np.size(common_times):
+        raise ValueError('Not injective time array value matching!')
+
+    return common_times
 
 #=== MAIN ===
 if __name__ == "__main__":

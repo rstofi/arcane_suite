@@ -31,15 +31,15 @@ def init_empty_config_for_otfms(template_path, overwrite=True):
     TO DO: if too many control options are implemented re-structure the code
 
     Parameters
-    ==========
+    ----------
     template_path: str
         Path and name of the template created
 
     overwrite: bool, opt
         If True the input file is overwritten, othervise an error is thrown
 
-    Returns:
-    ========
+    Returns
+    -------
     Create a template config file
 
     """
@@ -62,18 +62,18 @@ def init_empty_config_for_otfms(template_path, overwrite=True):
         aconfig.write(f"{'timerange':<30}" + '= \n')
         aconfig.write(f"{'ant1_ID':<30}" + '= \n')
         aconfig.write(f"{'ant2_ID':<30}" + '= \n')
-
+        aconfig.write(f"{'time_crossmatch_threshold':<30}" + '= \n')
 
 def get_otfms_data_variables(config_path):
     """Read the environmental variables unique to initalise the otfms pipeline
     
     Parameters
-    ==========
+    ----------
     config_path: str
         Path to the config file initializing the pipeline
     
     Return
-    ======
+    ------
     MS_dir: str
         Path to the input MS directory
 
@@ -86,7 +86,16 @@ def get_otfms_data_variables(config_path):
     config.read(config_path)
 
     MS_dir = config.get('DATA','MS')
+    MS_dir = pipeline.remove_comment(MS_dir).strip()
+
+    if MS_dir == '':
+        raise ValueError('Missing mandatory parameter: MS')
+
     pointing_ref = config.get('DATA','pointing_ref')
+    pointing_ref = pipeline.remove_comment(pointing_ref).strip()
+
+    if pointing_ref == '':
+        raise ValueError('Missing mandatory parameter: pointing_ref')    
 
     return MS_dir, pointing_ref
 
@@ -108,45 +117,54 @@ def get_otfms_data_selection_from_config(config_path):
             are not defined in the parset file!
 
     Parameters
-    ==========
+    ----------
     config_path: str
         Path to the config file initializing the pipeline
     
     Return
-    ======
+    ------
     calibrator_list: list of str
         A list of the calibrator field names to use
 
     target_field_list: list of str
         A list of the traget fields
 
-    timerange: str or None
+    timerange: str or None, optional
         A timerange for which the OTF pointings will be selected
 
     scans: list of int or None
         A list of scans used for the data selection
 
-    ant1_ID: int
+    ant1_ID: int, optional
         The ID of a reference antenna used for the baseline selection.
         This *should* be the ID of the antenna used to generate the `pointing_ref`
         data file! Default value is 0 if not specified
 
-    ant1_ID: int
+    ant1_ID: int, optional
         The second antenna used for the reference baseline in data selection. The
         default value is 1 or 0 if `ant1_ID` is set to be one
 
+    time_crossmatch_threshold: float, optional
+        The treshold in which below two timestamps from the reference pointing
+        and the MS are considered to be the same
 
     """
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(config_path)
 
     #Mandatory
-    calibrator_list =  [s.strip() for s in config.get('DATA','calibrator_list').split(',')]
-    target_field_list = [s.strip() for s in config.get('DATA','target_field_list').split(',')]
-    
+    calibrator_list =  [pipeline.remove_comment(s).strip() for s in config.get('DATA','calibrator_list').split(',')]
+    target_field_list = [pipeline.remove_comment(s).strip() for s in config.get('DATA','target_field_list').split(',')]
+
+    if len(calibrator_list) == 1 and calibrator_list[0] == '':
+        raise ValueError('Missing mandatory parameter: calibrator_list')
+    if len(target_field_list) == 1 and target_field_list[0] == '':
+        raise ValueError('Missing mandatory parameter: target_field_list')
+
     #Optional
     try:
         timerange = config.get('DATA','timerange', fallback=None)
+        timerange = pipeline.remove_comment(timerange)
 
         #If no value is provided
         if timerange.strip() == '': 
@@ -165,6 +183,8 @@ def get_otfms_data_selection_from_config(config_path):
     except:
         #Check if empty string is given
         scans = str(config.get('DATA','scans'))
+        scans = pipeline.remove_comment(scans)
+
         if scans.strip() == '':
             scans = None
         else:
@@ -180,31 +200,61 @@ def get_otfms_data_selection_from_config(config_path):
         ant1_ID = config.getint('DATA','ant1_ID', fallback=0) 
     except ValueError:
         ant1_ID_string = config.get('DATA','ant1_ID')
-        
-        if ant1_ID_string.strip() != '':
-            logger.warning('Invalid ID format for ant1_ID!')
-            logger.info('Setting ant1_ID to 0')
+        ant1_ID_string = pipeline.remove_comment(ant1_ID_string)
 
-        ant1_ID = 0
+        try:
+            ant1_ID = int(ant1_ID_string)
+        except:
+            if ant1_ID_string.strip() != '':
+                logger.warning('Invalid format for ant1_ID!')
+                logger.info('Setting ant1_ID to 0')
+
+            ant1_ID = 0
 
     try:
         ant2_ID = config.getint('DATA','ant2_ID', fallback=1)
     except ValueError:
         ant2_ID_string = config.get('DATA','ant2_ID')
-        
-        if ant2_ID_string.strip() != '':
-            logger.warning('Invalid ID format for ant2_ID!')
-            logger.info('Setting ant2_ID to 1')
+        ant2_ID_string = pipeline.remove_comment(ant2_ID_string)
+        try:
+            ant2_ID = int(ant2_ID_string)
+        except:        
+            if ant2_ID_string.strip() != '':
+                logger.warning('Invalid format for ant2_ID!')
+                logger.info('Setting ant2_ID to 1')
 
-        ant2_ID = 1
+            ant2_ID = 1
 
     if ant1_ID == ant2_ID:
         if ant1_ID != 0:
+            logger.warning('ant1_ID and ant2_ID are equal, setting ant2_ID to 0')
             ant2_ID = 0
         else:
+            logger.warning('ant1_ID and ant2_ID are equal, setting ant2_ID to 1')
             ant2_ID = 1
 
-    return calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID
+    #Note that ANTENNA1 *always* have a smaller ID number than ANTENNA2 in an MS
+    # So for a general case, we need to swap the two IDs if ant1_ID > ant2_ID
+
+    if ant1_ID > ant2_ID:
+        logger.debug('Swapping ant1_ID and ant2_ID to make sure baseline exists in MS')
+        ant1_ID, ant2_ID = ant2_ID, ant1_ID #Swapping two variables without a teporary variable
+
+
+    #Default is toi set to be 0.001 i.e. a millisecond
+    try:
+        time_crossmatch_threshold = config.getfloat('DATA','time_crossmatch_threshold', fallback=0.001)
+    except ValueError:
+        time_crossmatch_threshold_string = config.get('DATA','time_crossmatch_threshold')
+        time_crossmatch_threshold_string = pipeline.remove_comment(time_crossmatch_threshold_string)
+
+        if time_crossmatch_threshold_string.strip() != '':
+            logger.warning('Invalid format format for time_crossmatch_threshold!')
+            logger.info('Setting time_crossmatch_threshold to 0.0001')
+
+        time_crossmatch_threshold = 0.0001
+
+    return calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, time_crossmatch_threshold
 
 def get_times_from_reference_pointing_file(refrence_pointing_npz):
     """Get the `time` array from the reference antenna pointing
@@ -212,14 +262,14 @@ def get_times_from_reference_pointing_file(refrence_pointing_npz):
 
     The time array should be in UNIX format
 
-    Parameters:
-    ===========
+    Parameters
+    ----------
     reference_pointing: str
         The path to the .npz file
 
-    Returns:
-    ========
-    time_array: <numpy.ndArray>
+    Returns
+    -------
+    time_array: numpy array of float
         The times in Unix format
 
     """
@@ -239,17 +289,17 @@ def get_pointing_from_reference_pointing_file(refrence_pointing_npz):
 
     The ra and dec arrays should be in degrees
 
-    Parameters:
-    ===========
+    Parameters
+    ----------
     reference_pointing: str
         The path to the .npz file
 
-    Returns:
-    ========
-    ra_array: <numpy.ndArray>
+    Returns
+    -------
+    ra_array: numpy array of float
         The pointing RA value in degrees
 
-    dec_array: <numpy.ndArray>
+    dec_array: numpy array of float
 
     """
     ra_array = np.load(refrence_pointing_npz)['ra']
@@ -268,20 +318,20 @@ def get_pointing_and_times_from_reference_pointing_file(refrence_pointing_npz):
 
     TO DO: add .csv/text file format support
     
-    Parameters:
-    ===========
+    Parameters
+    ----------
     reference_pointing: str
         The path to the .npz file
 
-    Returns:
-    ========
-    time_array: <numpy.ndArray>
+    Returns
+    -------
+    time_array: numpy array of float
         The times in Unix format
 
-    ra_array: <numpy.ndArray>
+    ra_array: numpy array of float
         The pointing RA value in degrees
 
-    dec_array: <numpy.ndArray>
+    dec_array: numpy array of float
         The pointing Dec value in degrees
 
     """

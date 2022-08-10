@@ -50,8 +50,6 @@ def main():
         -- config.yaml
         |
         -- otfms_worflow_dag.pdf
-        |
-        -- README.rst
     '''
 
     If the structure above exists, only these files under `working_dir` will be
@@ -71,7 +69,7 @@ def main():
     TO DO: run check Snakemake setup, build dag and create REAMDE.rst
 
     Keyword Arguments
-    =================
+    -----------------
     
     str -c or --config_file:
         String, Full path to the configuration file for the pipeline setup
@@ -174,7 +172,7 @@ def main():
 
     MS = ms_wrapper.create_MS_table_object(MS_path)
 
-    calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID = \
+    calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, time_crossmatch_threshold = \
                     otf_pointing.get_otfms_data_selection_from_config(args.config_file)
 
     #Check if calibrator and target fields are in the MS
@@ -187,10 +185,14 @@ def main():
         if calibrator not in field_Name_ID_dict.keys():
             raise ValueError("Calibrator field '{0:s}' not found in the input MS!".format(calibrator))
 
+    del calibrator
+
     for target in target_field_list:
         if target not in field_Name_ID_dict.keys():
             raise ValueError("Target field '{0:s}' not found in the input MS!".format(target))
  
+    del target
+
     #Check for scan data selection
     if scans != None:
         field_scan_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS,
@@ -204,9 +206,13 @@ def main():
         for target in target_field_list:
             target_field_scans.extend(field_scan_dict[target])
 
+        del target
+
         for sID in scans:
             if sID not in target_field_scans:
                 raise ValueError('Target field(s) have no scan {0:d}'.format(sID))
+
+        del sID
 
         #Get times
         times = ms_wrapper.get_time_based_on_field_names_and_scan_IDs(MS,
@@ -239,6 +245,8 @@ def main():
     else:
         selected_times = copy.deepcopy(times)
 
+    del times
+
     #Close MS
     ms_wrapper.close_MS_table_object(MS)
 
@@ -250,16 +258,29 @@ def main():
     pointing_times = otf_pointing.get_times_from_reference_pointing_file(pointing_ref_path)
 
     #Generate selected-only values from the pointing array
-    selected_pointing_times = copy.deepcopy(a_time.subselect_timerange_from_times_array(times,
+    if timerange != None:
+        selected_pointing_times = copy.deepcopy(a_time.subselect_timerange_from_times_array(
+                                        pointing_times,
                                         start_time = time_selection_start,
                                         end_time = time_selection_end))
 
-    #Now get the cross matching
+    else:
+        selected_pointing_times = copy.deepcopy(pointing_times)
 
+    #Now get the cross matching
+    cross_matched_reference_times = \
+        a_time.time_arrays_injective_intersection(selected_pointing_times,
+                                                    selected_times,
+                                                    quick_subselect = False,
+                                                    threshold = time_crossmatch_threshold)
+
+    del selected_pointing_times, selected_times
 
     #TO DO: fix this log message
-    logger.info('{0:d} OTF pointings selected'.format(np.size(selected_times)))
-    logger.info('{0:d} OTF pointings selected'.format(np.size(selected_pointing_times)))
+    if np.size(cross_matched_reference_times) == 0:
+        raise ValueError('No valid OTF pointing selection can be made!')
+
+    logger.info('{0:d} OTF pointings selected'.format(np.size(cross_matched_reference_times)))
 
     ms_wrapper.close_MS_table_object(MS)
 
@@ -296,11 +317,14 @@ def main():
 
         #Build field_ID dict
         sconfig.write('field_ID:\n')
-        for i, unix_timestamp in zip(range(0,np.size(selected_times)), selected_times):
-            sconfig.write("  '{0:d}': {1:.4f}\n".format(i, unix_timestamp))
+        for i in range(0,np.size(cross_matched_reference_times)):
+            sconfig.write("  '{0:d}': {1:.4f}\n".format(i,
+                                        cross_matched_reference_times[i]))
 
     #=== Test if build was succesfull ===
-    logger.info('Test pipeline build and create workflow DAG...')
+    logger.info('Testing pipeline and create workflow DAG...')
+
+
 
     #=== Exit
     logger.info('Pipeline created')

@@ -33,7 +33,7 @@ def create_MS_table_object(mspath, readonly=True, **kwargs):
     So ideally, only one reading in happens for each MS and all inside this function!
 
     Parameters
-    ==========
+    ----------
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
 
@@ -41,9 +41,10 @@ def create_MS_table_object(mspath, readonly=True, **kwargs):
         If True, the tables of the MS can be read only, but if set to False one can modify the MS
 
     Returns
-    =======
+    -------
     MS: ``casacore.tables.table.table`` object
         The in-memory Measurement Set
+
     """
     #create an empty MS in-memory to check the object type: the working solution
     MS_type_tmp = casatables.table('',casatables.maketabdesc([casatables.makescacoldesc('DATA',0)]),memorytable=True,ack=False)
@@ -65,12 +66,12 @@ def close_MS_table_object(mspath):
     leaks and just implementing good practices...
 
     Parameters
-    ==========
+    ----------
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
 
     Returns
-    =======
+    -------
         Closes the MS
 
     """
@@ -94,7 +95,7 @@ def get_MS_subtable_path(mspath, subtable_name, close=False):
     NOTE: this piece of code only works on UNIX systems!
 
     Parameters
-    ==========
+    ----------
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
 
@@ -105,7 +106,7 @@ def get_MS_subtable_path(mspath, subtable_name, close=False):
         If True the MS will be closed
 
     Returns
-    =======
+    -------
     subtable_path: str
         Absolute path to the subtable
 
@@ -157,7 +158,7 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
         the heavy-lifting to TAQL, and only work with the sub-selected data.
 
     Parameters
-    ==========
+    ----------
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
 
@@ -181,13 +182,19 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
         The same caveats as for `ref_ant_ID` applyes here.
 
     Returns
-    =======
+    -------
     fieldname_ID_dict: dict
         Dictionatry containing the field names and the corresponding field ID's
 
     """
     if ant1_ID == ant2_ID:
         raise ValueError('Only cross-correltion baselines are allowed for field and scan ID queryes!')
+
+    #Note that ANTENNA1 *always* have a smaller ID number than ANTENNA2 in an MS
+    # So for a general case, we need to swap the two IDs if ant1_ID > ant2_ID
+    if ant1_ID > ant2_ID:
+        logger.debug('Swapping ant1_ID and ant2_ID to make sure baseline exists in MS')
+        ant1_ID, ant2_ID = ant2_ID, ant1_ID #Swapping two variables without a teporary variable
 
     MS = create_MS_table_object(mspath)
 
@@ -213,7 +220,8 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
             fieldname_ID_dict[field_name] = [i]
         else:
             fieldname_ID_dict[field_name].append(i)
-            
+    
+    del i
 
     close_MS_table_object(fieldtable)
 
@@ -238,6 +246,8 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
                         columns='SCAN_NUMBER')
 
             scanname_ID_disct[field_name] = list(np.unique(scan_qtable.getcol('SCAN_NUMBER')))
+
+        del field_name
 
         if close:
             close_MS_table_object(MS)
@@ -276,7 +286,7 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
 
 
     Parameters
-    ==========
+    ----------
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
 
@@ -301,7 +311,7 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
         The other reference entenna in the baseline used for query the MS
 
     Returns
-    =======
+    -------
     times: array of float
         An array containing the time values
 
@@ -315,6 +325,13 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
     if ant1_ID == ant2_ID:
         raise ValueError('Only cross-correltion baselines are allowed for time selecttion queryes!')
 
+    #Note that ANTENNA1 *always* have a smaller ID number than ANTENNA2 in an MS
+    # So for a general case, we need to swap the two IDs if ant1_ID > ant2_ID
+
+    if ant1_ID > ant2_ID:
+        logger.debug('Swapping ant1_ID and ant2_ID to make sure baseline exists in MS')
+        ant1_ID, ant2_ID = ant2_ID, ant1_ID #Swapping two variables without a teporary variable
+
     MS = create_MS_table_object(mspath)
 
     #This is fast
@@ -323,8 +340,7 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
     #Get the field selection
     if field_names == None:
         field_selection_string = misc.convert_list_to_string(
-            [].extend(field_Name_ID_dict.keys()[0]))
-            #[field_Name_ID_dict[field_name][0] for field_name in field_Name_ID_dict.keys()])
+            [field_Name_ID_dict[field_name][0] for field_name in field_Name_ID_dict.keys()])
     
     else:    
         #Select the field ID based on the name(s)
@@ -356,7 +372,7 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
     
     if np.size(times) == 0:
         warnings.warn('No TIME data is selected!')
-        logger.warning('No TIME data is selected!')
+        #logger.warning('No TIME data is selected!')
 
     #Raise warning if not only unique times retrieved
     elif np.size(times) != np.size(np.unique(times)):
