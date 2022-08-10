@@ -1,125 +1,114 @@
-"""Sankefile
+"""Sankefile for the otfms pipeline
 """
 
 import numpy as np
 
 #=== Configuration ===
-#WORKING_DIR = os.getcwd()
-
-#DATA_DIR = WORKING_DIR + '/input'
-#RESULTS_DIR = WORKING_DIR + '/results'
-
-def access_wildcards(wildcards):
-    #This runs the function even during dry runs
-    print(wildcards.field_ID)
-    print(type(wildcards.field_ID))
-
-    #return str(int(wildcards.field_ID) + 1)
-    return wildcards.field_ID
-
-#workdir: WORKING_DIR
-#FIELDS=range(0,2)
-
 configfile: "config.yaml"
+
+#Getting values from the config file
 workdir: config['working_dir']
 
-#print(config['field_ID'])
-#print(type(config['field_ID']['1']))
+#WORKING_dir = config['working_dir'] #Don't need this explicitly
+MS_dir = config['MS']
+POINTING_REF_file = config['pointing_ref']
+LOG_dir = config['log_dir']
+OUTPUT_dir = config['output_dir']
+OTF_OUTPUT_dir = config['output_otf_dir']
+
+#The field_ID_mapping is an ID to UNIX timestamp mapping
+#We use only the keys in the Snakefile, but in the actual rules the configfile is
+#used based on the ID's basically
+
+OTF_FIELD_ID_MAPPING = config['otf_field_ID_mapping']
+
+#To avoid ambiguity in wildcards, use the keys only
+OTF_FIELD_IDs = list(OTF_FIELD_ID_MAPPING.keys())
 
 #=== Rules ===
 rule all:
     input:
-        '{0:s}/final.ms'.format(config['output_dir'])
+        '{0:s}/final.ms'.format(OUTPUT_dir)
 
-rule create_config:
-    input:
-        '{0:s}'.format(config['pointing_ref']),
-        '{0:s}'.format(config['MS'])
-    output:
-        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
-    log:
-        '{0:s}/crete_config.log'.format(config['log_dir'])
-    params:
-        output_dir = config['output_dir'],
-        log_dir = config['log_dir']
-    shell:
-        'touch {params.output_dir}/chgcentre.cfg && touch {params.log_dir}/crete_config.log'
-
+#Split the calibrator field(s) from input MS
 rule split_calibrators:
     input:
-        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+        '{0:s}'.format(MS_dir)
     output:
-        directory('{0:s}/calibrators.ms'.format(config['output_dir']))
+        directory('{0:s}/calibrators.ms'.format(OUTPUT_dir))
     log:
-        '{0:s}/split_calibrators.log'.format(config['log_dir'])
+        '{0:s}/split_calibrators.log'.format(LOG_dir)
     params:
-        output_dir = config['output_dir'],
-        log_dir = config['log_dir']
+        output_dir = OUTPUT_dir,
+        log_dir = LOG_dir
     shell:
         'mkdir {params.output_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
 
+#Split a single OTF pointing from the MS
 rule split_OTF_scans_by_pointing:
     input:
-        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+        '{0:s}'.format(MS_dir),
+        '{0:s}'.format(POINTING_REF_file)
     output:
-        directory('{0:s}'.format(config['output_otf_dir']) +\
+        directory('{0:s}'.format(OTF_OUTPUT_dir) +\
                 '/otf_pointing_no_{field_ID}.ms')
     log:
-        '{0:s}'.format(config['log_dir']) +\
+        '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_split.log'
     params:
-        output_otf_dir = config['output_otf_dir'],
-        log_dir = config['log_dir']
+        output_otf_dir = OTF_OUTPUT_dir,
+        log_dir = LOG_dir
     shell:
         'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms' +\
         ' && touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log'
 
+#Rename the pointing field so later imaging processes can access it as a separate field
 rule rename_OTF_pointing:
     input:
-        '{0:s}'.format(config['log_dir']) +\
-        '/otf_pointing_no_{field_ID}_split.log',
-        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+        '{0:s}'.format(LOG_dir) +\
+        '/otf_pointing_no_{field_ID}_split.log'
     output:
-        directory('{0:s}'.format(config['output_otf_dir']) +\
+        directory('{0:s}'.format(OTF_OUTPUT_dir) +\
                 '/otf_pointing_no_{field_ID}.ms')
     log:
-        '{0:s}'.format(config['log_dir']) +\
+        '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_renaming.log'
     params:
-        output_otf_dir = config['output_otf_dir'],
-        log_dir = config['log_dir']
+        output_otf_dir = OTF_OUTPUT_dir,
+        log_dir = LOG_dir
     shell:
         'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
         ' && touch {params.log_dir}/renamed_otf_pointing_no_{wildcards.field_ID}_renaming.log'
 
+#Apply the phase rotation on the single pointing
 rule apply_phase_rotation:
     input:
-        '{0:s}'.format(config['log_dir']) +\
-        '/otf_pointing_no_{field_ID}_renaming.log',
-        '{0:s}/chgcentre.cfg'.format(config['output_dir'])
+        '{0:s}'.format(LOG_dir) +\
+        '/otf_pointing_no_{field_ID}_renaming.log'
     output:
-        directory('{0:s}'.format(config['output_otf_dir']) +\
+        directory('{0:s}'.format(OTF_OUTPUT_dir) +\
             '/otf_pointing_no_{field_ID}.ms')
     params:
-        output_otf_dir = config['output_otf_dir'],
-        log_dir = config['log_dir']
+        output_otf_dir = OTF_OUTPUT_dir,
+        log_dir = LOG_dir
     log:
-        '{0:s}'.format(config['log_dir']) +\
+        '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_chgcentre.log'
     shell:
         'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
         ' && touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log'
 
+#Merge phase-rotated OTF pointings and the calibrator(s) 
 rule merge_scan_and_target:
     input:
-        expand('{0:s}'.format(config['log_dir']) +\
-        '/otf_pointing_no_{field_ID}_chgcentre.log', field_ID=config['field_ID']),
-        '{0:1}/calibrators.ms'.format(config['output_dir'])
+        expand('{0:s}'.format(LOG_dir) +\
+        '/otf_pointing_no_{field_ID}_chgcentre.log', field_ID=OTF_FIELD_IDs),
+        '{0:1}/calibrators.ms'.format(OUTPUT_dir)
     output:
-        directory('{0:s}/final.ms'.format(config['output_dir']))
+        directory('{0:s}/final.ms'.format(OUTPUT_dir))
     log:
-        '{0:s}/merge_scan_and_target.log'.format(config['log_dir'])
+        '{0:s}/merge_scan_and_target.log'.format(LOG_dir)
     params:
-        output_dir = config['output_dir']
+        output_dir = OUTPUT_dir
     shell:
         'mkdir {params.output_dir}/final.ms'

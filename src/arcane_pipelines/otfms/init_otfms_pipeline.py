@@ -10,6 +10,7 @@ import gc
 import datetime
 import numpy as np
 import copy
+import subprocess
 
 from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
@@ -48,8 +49,6 @@ def main():
         -- Sankefile
         |
         -- config.yaml
-        |
-        -- otfms_worflow_dag.pdf
     '''
 
     If the structure above exists, only these files under `working_dir` will be
@@ -65,8 +64,6 @@ def main():
 
     Furthermore the code can create an empty parset file for the user if the -t
     option is provided
-
-    TO DO: run check Snakemake setup, build dag and create REAMDE.rst
 
     Keyword Arguments
     -----------------
@@ -316,15 +313,25 @@ def main():
                         pointing_ref_path))
 
         #Build field_ID dict
-        sconfig.write('field_ID:\n')
+        sconfig.write('otf_field_ID_mapping:\n')
         for i in range(0,np.size(cross_matched_reference_times)):
             sconfig.write("  '{0:d}': {1:.4f}\n".format(i,
                                         cross_matched_reference_times[i]))
 
     #=== Test if build was succesfull ===
-    logger.info('Testing pipeline and create workflow DAG...')
+    logger.info('Testing pipeline via dry run...')
 
+    #Snakemake dry run (also creates a .snakemake hidden directory under the working_dir)
+    snakemake_proc = subprocess.run('cd {0:s};  snakemake -np'.format(working_dir),
+                    shell=True, capture_output=True)
+    #Capture output
+    out, err = snakemake_proc.stdout, snakemake_proc.stderr
+    exitcode = snakemake_proc.returncode
 
+    if exitcode != 0:
+        logger.error(out) #Snakemake puts everythin in out, and nothing to err
+        #logger.debug(err)
+        raise ValueError('Unexpected error occured in pipeline setup (see the Snakemake output above)!')
 
     #=== Exit
     logger.info('Pipeline created')
