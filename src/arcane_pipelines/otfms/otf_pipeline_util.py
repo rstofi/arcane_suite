@@ -54,15 +54,20 @@ def init_empty_config_for_otfms(template_path, overwrite=True):
 
         aconfig.write('\n[DATA]\n')
 
-        aconfig.write(f"{'MS':<30}" + '= #mandatory\n')
-        aconfig.write(f"{'pointing_ref':<30}" + '= #mandatory\n')
-        aconfig.write(f"{'calibrator_list':<30}" + '= #mandatory\n')
-        aconfig.write(f"{'target_field_list':<30}" + '= #mandatory\n')
-        aconfig.write(f"{'scans':<30}" + '= \n')
-        aconfig.write(f"{'timerange':<30}" + '= \n')
-        aconfig.write(f"{'ant1_ID':<30}" + '= \n')
-        aconfig.write(f"{'ant2_ID':<30}" + '= \n')
-        aconfig.write(f"{'time_crossmatch_threshold':<30}" + '= \n')
+        aconfig.write(f"{'MS':<30}" + f"{'= ':<5}" + '#Mandatory, path\n')
+        aconfig.write(f"{'pointing_ref':<30}" + f"{'= ':<5}" + '#Mandatory, path\n')
+        aconfig.write(f"{'calibrator_list':<30}" + f"{'= ':<5}" + \
+            '#Mandatory, comma separated list\n')
+        aconfig.write(f"{'target_field_list':<30}" + f"{'= ':<5}" + \
+                                        '#Mandatory, comma separated list\n')
+        aconfig.write(f"{'scans':<30}" + f"{'= ':<5}" + \
+            '#Optional, comma separated list of scan IDs\n')
+        aconfig.write(f"{'timerange':<30}" + f"{'= ':<5}" + '#Optional, \
+ formatted as yyyy/mm/dd/hh:mm:ss.ss~yyyy/mm/dd/hh:mm:ss.ss\n')
+        aconfig.write(f"{'ant1_ID':<30}" + f"{'= ':<5}" + '#Optional, int\n')
+        aconfig.write(f"{'ant2_ID':<30}" + f"{'= ':<5}" + '#Optional, int\n')
+        aconfig.write(f"{'time_crossmatch_threshold':<30}" + f"{'= ':<5}" + \
+                '#Optional, float\n')
 
 def get_otfms_data_variables(config_path):
     """Read the environmental variables unique to initalise the otfms pipeline

@@ -98,9 +98,8 @@ def remove_comment(arg_string, comment_character='#'):
     return arg_string.split(comment_character)[0]
 
 def get_common_env_variables(config_path):
-	"""Read environmental variables common across ALL pipelines of arcane-suite
+    """Read environmental variables common across ALL pipelines of arcane-suite
     during initialization
-
     Parameters
     ----------
     config_path: str
@@ -110,36 +109,35 @@ def get_common_env_variables(config_path):
     -------
     working_dir: str
         Path to the working directory in which the pipeline will be initialized
+    """
+    config = configparser.ConfigParser()
+    config.read(config_path)
 
-	"""
-	config = configparser.ConfigParser()
-	config.read(config_path)
+    working_dir = config.get('ENV','working_dir')
 
-	working_dir = config.get('ENV','working_dir')
+    working_dir = remove_comment(working_dir).strip()
 
-	return working_dir
+    if working_dir == '':
+        raise ValueError('Missing mandatory parameter: working_dir')
+
+    return working_dir
 
 def init_empty_config_file_with_common_variables(template_path,
                                                 pipeline_name,
                                                 overwrite=True):
     """Initialise config file that can be used as a basis for other code to expand
     into an empty template config file.
-
     Parameters
     ----------
     template_path: str
         Path and name of the template created
-
     pipeline_name: str
         The name of the pipeline. Is written in the header line as an info
-
     overwrite: bool, opt
         If True the input file is overwritten, othervise an error is thrown
-
     Returns
     -------
     Create a template config file
-
     """
     if os.path.exists(template_path):
         if overwrite:
@@ -154,7 +152,7 @@ arcane-suit at {1:s}\n'.format(pipeline_name, str(datetime.datetime.now())))
 
         aconfig.write('\n[ENV]\n')
 
-        aconfig.write(f"{'working_dir':<30}" + '= #mandatory\n')
+        aconfig.write(f"{'working_dir':<30}" + f"{'= ':<5}" + '#Mandatory, path\n')
 
 def get_dict_from_yaml(yaml_path, dict_name):
     """
