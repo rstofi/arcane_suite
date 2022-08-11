@@ -41,7 +41,7 @@ To visualise the pipeline logic run the following command under the working dire
     snakemake --rulegraph | dot -Tpdf > otfms_rule_graph.pdf
 
 """
-
+import os
 import numpy as np
 
 #=== Configuration ===
@@ -50,7 +50,7 @@ configfile: "config.yaml"
 #Getting values from the config file
 workdir: config['working_dir']
 
-#WORKING_dir = config['working_dir'] #Don't need this explicitly
+WORKING_dir = config['working_dir'] #Don't need this explicitly
 MS_dir = config['MS']
 POINTING_REF_file = config['pointing_ref']
 LOG_dir = config['log_dir']
@@ -98,14 +98,19 @@ rule split_OTF_scans_by_pointing:
         '/otf_pointing_no_{field_ID}_split.log'
     params:
         output_otf_dir = OTF_OUTPUT_dir,
-        log_dir = LOG_dir
+        log_dir = LOG_dir,
+        yaml_path = os.path.join(WORKING_dir, 'config.yaml')
     shell:
-        'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms' +\
-        ' && touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log'
+        'source ~/.bashrc && otfms_split_otf_scans_by_pointing -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log'
+        #'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms' +\
+        #' && touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log'
 
 #Rename the pointing field so later imaging processes can access it as a separate field
 rule rename_OTF_pointing:
     input:
+        '{0:s}'.format(OTF_OUTPUT_dir) +\
+                '/otf_pointing_no_{field_ID}.ms',
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_split.log'
     output:

@@ -68,6 +68,8 @@ def init_empty_config_for_otfms(template_path, overwrite=True):
         aconfig.write(f"{'ant2_ID':<30}" + f"{'= ':<5}" + '#Optional, int\n')
         aconfig.write(f"{'time_crossmatch_threshold':<30}" + f"{'= ':<5}" + \
                 '#Optional, float\n')
+        aconfig.write(f"{'split_timedelta':<30}" + f"{'= ':<5}" + \
+                '#Optional, float\n')
 
 def get_otfms_data_variables(config_path):
     """Read the environmental variables unique to initalise the otfms pipeline
@@ -246,7 +248,7 @@ def get_otfms_data_selection_from_config(config_path):
         ant1_ID, ant2_ID = ant2_ID, ant1_ID #Swapping two variables without a teporary variable
 
 
-    #Default is toi set to be 0.001 i.e. a millisecond
+    #Default is to set to be 0.001 i.e. a millisecond
     try:
         time_crossmatch_threshold = config.getfloat('DATA','time_crossmatch_threshold', fallback=0.001)
     except ValueError:
@@ -259,7 +261,21 @@ def get_otfms_data_selection_from_config(config_path):
 
         time_crossmatch_threshold = 0.0001
 
-    return calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, time_crossmatch_threshold
+    #Default is to set to be 0.5s so the time selection will happen within +/- 0.25 s 
+    try:
+        split_timedelta = config.getfloat('DATA','split_timedelta', fallback=0.5)
+    except ValueError:
+        split_timedelta_string = config.get('DATA','split_timedelta')
+        split_timedelta_string = pipeline.remove_comment(split_timedelta_string)
+
+        if split_timedelta_string.strip() != '':
+            logger.warning('Invalid format format for split_timedelta!')
+            logger.info('Setting split_timedelta to 1')
+
+        split_timedelta = 0.5
+
+    return calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, \
+            time_crossmatch_threshold, split_timedelta
 
 def get_times_from_reference_pointing_file(refrence_pointing_npz):
     """Get the `time` array from the reference antenna pointing

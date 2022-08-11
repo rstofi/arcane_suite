@@ -19,7 +19,7 @@ from arcane_utils import time as a_time
 from arcane_pipelines.otfms import otf_pipeline_util as putil
 
 #=== Set logging
-logger = pipeline.init_logger()
+logger = pipeline.init_logger(color=True)
 
 #Add logging from modules
 utils_logger = logging.getLogger('arcane_utils')
@@ -122,7 +122,25 @@ def main():
     #=== Read the environment vales from the config file
     logger.info('Solving for environment...')
 
-    working_dir = pipeline.get_common_env_variables(args.config_file)
+    #Checking for required software
+    snakemake_alias = 'snakemake'
+    if pipeline.is_command_line_tool(snakemake_alias) == False:
+        raise ValueError("The command '{0:s}' not callable! Please install {0:s}!".format(snakemake_alias))
+
+    del snakemake_alias
+
+    chgcantre_alias = 'chgcentre'
+    if pipeline.is_command_line_tool(chgcantre_alias) == False:
+        logger.critical("The command '{0:s}' not callable! Please install {0:s}!".format(chgcantre_alias))
+
+    del chgcantre_alias
+
+    #Get the ENV variables from config
+    working_dir, casa_alias = pipeline.get_common_env_variables(args.config_file)
+
+    #Check for casa installation
+    if pipeline.is_command_line_tool(casa_alias, t_args=['--log2term', '--nogui', '--nologfile']) == False:
+        logger.critical("No CASA installation found that can be called via the '{0:s}' command!".format(casa_alias))
 
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
@@ -161,7 +179,8 @@ def main():
 
     MS = ms_wrapper.create_MS_table_object(MS_path)
 
-    calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, time_crossmatch_threshold = \
+    calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, \
+    time_crossmatch_threshold, split_timedelta = \
                     putil.get_otfms_data_selection_from_config(args.config_file)
 
     #Check if calibrator and target fields are in the MS
@@ -305,6 +324,10 @@ def main():
                         pointing_ref_path))
         sconfig.write('time_crossmatch_threshold:\n  {0:.8f}\n'.format(
                         time_crossmatch_threshold))
+        sconfig.write('split_timedelta:\n  {0:.8f}\n'.format(
+                        split_timedelta))
+        sconfig.write("casa_alias:\n  '{0:s}'\n".format(
+                        casa_alias))
 
         #Build field_ID dict
         sconfig.write('otf_field_ID_mapping:\n')

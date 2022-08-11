@@ -2,7 +2,8 @@
 """
 
 __all__ = ['argflatten', 'get_common_env_variables', 'remove_comment',
-            'init_logger', 'init_empty_config_file_with_common_variables']
+            'init_logger', 'init_empty_config_file_with_common_variables',
+            'is_command_line_tool']
 
 
 import sys
@@ -11,14 +12,45 @@ import logging
 import configparser
 import datetime
 import yaml
+import errno
+import subprocess
 
 from arcane_utils.globals import _VALID_LOG_LEVELS
 
 #=== Set up logging
 logger = logging.getLogger(__name__)
 
+#=== Classes ===
+class CustomColorFormatter(logging.Formatter):
+    """Custom formatter for logging, that add different color for the different
+    log levels
+
+    stolen from: https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output
+    """
+
+    grey = "\x1b[38;20m"
+    yellow = "\x1b[33;20m"
+    red = "\x1b[31;20m"
+    bold_red = "\x1b[31;1m"
+    reset = "\x1b[0m"
+    #format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s (%(filename)s:%(lineno)d)"
+    format = '%(asctime)s -- %(levelname)s: %(message)s'
+
+    FORMATS = {
+        logging.DEBUG: grey + format + reset,
+        logging.INFO: grey + format + reset,
+        logging.WARNING: yellow + format + reset,
+        logging.ERROR: red + format + reset,
+        logging.CRITICAL: bold_red + format + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(log_fmt)
+        return formatter.format(record)
+
 #=== Functions ===
-def init_logger(log_level='INFO'):
+def init_logger(log_level='INFO', color=False):
     """Initialise the logger and formatting. This is a convinience function
 
     Parameters
@@ -49,12 +81,69 @@ def init_logger(log_level='INFO'):
         logger.setLevel(logging.NOTSET)
 
     handler = logging.StreamHandler(sys.stdout)
-    formatter = logging.Formatter('%(asctime)s -- %(levelname)s: %(message)s')
-    handler.setFormatter(formatter)
+
+    if color:
+        handler.setFormatter(CustomColorFormatter()) #Add coloured ciustom for logging
+    else:
+        formatter = logging.Formatter('%(asctime)s -- %(levelname)s: %(message)s')
+        handler.setFormatter(formatter)
 
     logger.addHandler(handler)
 
     return logger
+
+def is_command_line_tool(command_name, t_args=None):
+        """Function to check if a string is a valid callable command-line tool.
+        Usedult to check id e.g. snakemake is isnatalled on a system...
+
+        This is kinda a hacky code based on:
+        https://stackoverflow.com/questions/11210104/check-if-a-program-exists-from-a-python-script
+        https://stackoverflow.com/questions/12060863/python-subprocess-call-a-bash-alias
+
+        Basically do a call of the command using a plane envinroment and if there
+        is an error with the command, i.e. because it is an alias. The code attempts
+        to load /bin/bash/ in an interactive mode (which includes .bashrc)
+
+        NOTE: if a command
+
+        Parameters
+        ----------
+        command name: str
+            The command-line tool name to test
+        
+        t_args: list of string, optional
+            Additional arguments that can be passed to the code to be tested. Especially
+            useful for e.g. passing --nogui and --nologfile when testing casa
+
+        Retruns
+        -------
+        True, if such a tool exists, False otherwise
+
+
+        """
+
+        try:
+            devnull = open(os.devnull)
+            #devnull =  subprocess.DEVNULL
+            if t_args == None:
+                subprocess.Popen([command_name], stdout=devnull, stderr=devnull).communicate()
+            else:
+                commands = [command_name] + t_args
+                subprocess.Popen(commands, stdout=devnull, stderr=devnull).communicate()
+        except OSError as e:
+            try:
+                #Open shell in interactive mode with /bin/bas/ loaded
+                check_for_alias_proc = subprocess.run(['/bin/bash', '-i', '-c',
+                            'command -v {0:s} > /dev/null'.format(command_name)])
+
+                if check_for_alias_proc.returncode != 0:
+                    return False
+                else:
+                    return True
+            except:
+                if e.errno == errno.ENOENT:
+                    return False
+        return True
 
 def argflatten(arg_list):
     """Some argparser list arguments can be actually list of lists.
@@ -100,6 +189,7 @@ def remove_comment(arg_string, comment_character='#'):
 def get_common_env_variables(config_path):
     """Read environmental variables common across ALL pipelines of arcane-suite
     during initialization
+    
     Parameters
     ----------
     config_path: str
@@ -109,35 +199,56 @@ def get_common_env_variables(config_path):
     -------
     working_dir: str
         Path to the working directory in which the pipeline will be initialized
+    
     """
-    config = configparser.ConfigParser()
+    config = configparser.ConfigParser(allow_no_value=True)
     config.read(config_path)
 
-    working_dir = config.get('ENV','working_dir')
+    #Mandatory field: the working directory in which the Snakemake pipeline will be build
+    try:
+        working_dir = config.get('ENV','working_dir')
 
-    working_dir = remove_comment(working_dir).strip()
+        working_dir = remove_comment(working_dir).strip()
 
-    if working_dir == '':
-        raise ValueError('Missing mandatory parameter: working_dir')
+        if working_dir == '':
+            raise ValueError('Missing mandatory parameter: working_dir')
+    except:
+        raise ValueError('Mandatory parameter working_dir has to be specifyed')
 
-    return working_dir
+    #Optional field in case the casa installation can be called by anything thanű
+    #the casa command, e.g. casa6
+    try:
+        casa_alias = config.get('ENV','casa_alias')
+        casa_alias = remove_comment(casa_alias).strip()
+
+        if casa_alias == '':
+            casa_alias = 'casa'
+    except:
+        casa_alias = 'casa'
+
+    return working_dir, casa_alias
 
 def init_empty_config_file_with_common_variables(template_path,
                                                 pipeline_name,
                                                 overwrite=True):
     """Initialise config file that can be used as a basis for other code to expand
     into an empty template config file.
+
     Parameters
     ----------
     template_path: str
         Path and name of the template created
+    
     pipeline_name: str
         The name of the pipeline. Is written in the header line as an info
+    
     overwrite: bool, opt
         If True the input file is overwritten, othervise an error is thrown
+    
     Returns
     -------
     Create a template config file
+    
     """
     if os.path.exists(template_path):
         if overwrite:
@@ -153,18 +264,19 @@ arcane-suit at {1:s}\n'.format(pipeline_name, str(datetime.datetime.now())))
         aconfig.write('\n[ENV]\n')
 
         aconfig.write(f"{'working_dir':<30}" + f"{'= ':<5}" + '#Mandatory, path\n')
+        aconfig.write(f"{'casa_alias':<30}" + f"{'= ':<5}" + '#Optional, str\n')
 
-def get_dict_from_yaml(yaml_path, dict_name):
+def get_var_from_yaml(yaml_path, var_name):
     """
     """
 
     with open(yaml_path) as file:
         try:
-            yaml_dict = yaml.safe_load(file)   
-        except yaml.YAMLError as exc:
-            print(exc)
+            yaml_dict = yaml.safe_load(file)
+        except yaml.YAMLError as e:
+            raise ValueError('Error while parsing the yaml file: {0:s}'.format(e))
 
-    return yaml_dict[dict_name]
+    return yaml_dict[var_name]
 
 
 
