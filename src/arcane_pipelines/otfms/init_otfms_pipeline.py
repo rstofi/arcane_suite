@@ -16,18 +16,10 @@ from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
 from arcane_utils import time as a_time
 
-from arcane_pipelines.otfms import otf_pointing
+from arcane_pipelines.otfms import otf_pipeline_util as putil
 
 #=== Set logging
-logger = logging.getLogger()
-
-logger.setLevel(logging.INFO)
-
-handler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s -- %(levelname)s: %(message)s')
-handler.setFormatter(formatter)
-
-logger.addHandler(handler)
+logger = pipeline.init_logger()
 
 #Add logging from modules
 utils_logger = logging.getLogger('arcane_utils')
@@ -112,9 +104,9 @@ def main():
         logger.info('Creating template config file for *otfms* pipeline from arcane-suite')
 
         if not args.overwrite_lock:
-            otf_pointing.init_empty_config_for_otfms(template_path=args.config_file)
+            putil.init_empty_config_for_otfms(template_path=args.config_file)
         else:
-            otf_pointing.init_empty_config_for_otfms(template_path=args.config_file,
+            putil.init_empty_config_for_otfms(template_path=args.config_file,
                                                     overwrite=False)
 
         #TNow halt the program
@@ -147,7 +139,7 @@ def main():
             #Because the files under `working_dir` will be overwritten
 
     #Get the input data
-    MS_path, pointing_ref_path = otf_pointing.get_otfms_data_variables(args.config_file)
+    MS_path, pointing_ref_path = putil.get_otfms_data_variables(args.config_file)
 
     if not os.path.exists(MS_path):
         raise FileNotFoundError('Missing input MS directory {0:s}'.format(MS_path))
@@ -170,7 +162,7 @@ def main():
     MS = ms_wrapper.create_MS_table_object(MS_path)
 
     calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, time_crossmatch_threshold = \
-                    otf_pointing.get_otfms_data_selection_from_config(args.config_file)
+                    putil.get_otfms_data_selection_from_config(args.config_file)
 
     #Check if calibrator and target fields are in the MS
     field_Name_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(MS,
@@ -252,7 +244,7 @@ def main():
         raise ValueError('No OTF pointing matches the data selection criteria!')
 
     #Reading in the pointing reference file (existence already checked)
-    pointing_times = otf_pointing.get_times_from_reference_pointing_file(pointing_ref_path)
+    pointing_times = putil.get_times_from_reference_pointing_file(pointing_ref_path)
 
     #Generate selected-only values from the pointing array
     if timerange != None:
@@ -315,7 +307,7 @@ def main():
         #Build field_ID dict
         sconfig.write('otf_field_ID_mapping:\n')
         for i in range(0,np.size(cross_matched_reference_times)):
-            sconfig.write("  '{0:d}': {1:.4f}\n".format(i,
+            sconfig.write("  '{0:d}' : {1:.4f}\n".format(i,
                                         cross_matched_reference_times[i]))
 
     #=== Test if build was succesfull ===

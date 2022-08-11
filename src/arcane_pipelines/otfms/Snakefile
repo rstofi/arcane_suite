@@ -1,4 +1,45 @@
-"""Sankefile for the otfms pipeline
+"""Sankefile for the otfms pipeline. Each rule calls a custom command-line application
+with the name `otfms_rule_name_in_this_snakefile`
+
+Some rules are only a simple wrapper around casa tasks, but some are doing more
+than calling task from some library.
+
+For more info on the individual rules, see the correspondig python scripts!
+
+The otfms pipleine builds the following file structure:
+
+    working_dir/
+    |
+    -- snakefile #This file, created at pipeline initialisation
+    |
+    -- config.yaml #Created at pipeline initialisation
+    |
+    -- logs/
+    |   |
+    |    -- log files from all rules
+    |
+    -- results/
+    |   |
+    |   -- final.ms #The OTF format MS
+    |   |
+    |   -- calibrators.ms #The claibrators
+    |   |
+    |   -- otf_pointings/ #All the single OTF pointings
+    |       |
+    |       -- otf_pointing_no_0.ms
+    |       |
+    |       ...
+    |       |
+    |       -- otf_pointing_no_N.ms
+    |
+    -- .snakemake/ #Hidden directory created by snakemake for pipeline handling
+
+NOTE: this pipeline requires double (!) the input MS size
+
+To visualise the pipeline logic run the following command under the working directory:
+
+    snakemake --rulegraph | dot -Tpdf > otfms_rule_graph.pdf
+
 """
 
 import numpy as np

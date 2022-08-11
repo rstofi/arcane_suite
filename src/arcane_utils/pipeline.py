@@ -2,7 +2,7 @@
 """
 
 __all__ = ['argflatten', 'get_common_env_variables', 'remove_comment',
-            'init_empty_config_file_with_common_variables']
+            'init_logger', 'init_empty_config_file_with_common_variables']
 
 
 import sys
@@ -10,11 +10,52 @@ import os
 import logging
 import configparser
 import datetime
+import yaml
+
+from arcane_utils.globals import _VALID_LOG_LEVELS
 
 #=== Set up logging
 logger = logging.getLogger(__name__)
 
 #=== Functions ===
+def init_logger(log_level='INFO'):
+    """Initialise the logger and formatting. This is a convinience function
+
+    Parameters
+    ----------
+    log_level: str, optional
+        The level of the logger
+
+    Returns
+    -------
+    Logger object
+    """
+    if log_level not in _VALID_LOG_LEVELS:
+        raise ValueError('Invalid log level!')
+
+    logger = logging.getLogger()
+
+    if log_level == 'CRITICAL':
+        logger.setLevel(logging.CRITICAL)
+    elif log_level == 'ERROR':
+        logger.setLevel(logging.ERROR)
+    elif log_level == 'WARNING':
+        logger.setLevel(logging.WARNING)
+    elif log_level == 'INFO':
+        logger.setLevel(logging.INFO)
+    elif log_level == 'DEBUG':
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.NOTSET)
+
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter('%(asctime)s -- %(levelname)s: %(message)s')
+    handler.setFormatter(formatter)
+
+    logger.addHandler(handler)
+
+    return logger
+
 def argflatten(arg_list):
     """Some argparser list arguments can be actually list of lists.
     This is a simple routine to flatten list of lists to a simple list.
@@ -114,6 +155,19 @@ arcane-suit at {1:s}\n'.format(pipeline_name, str(datetime.datetime.now())))
         aconfig.write('\n[ENV]\n')
 
         aconfig.write(f"{'working_dir':<30}" + '= #mandatory\n')
+
+def get_dict_from_yaml(yaml_path, dict_name):
+    """
+    """
+
+    with open(yaml_path) as file:
+        try:
+            yaml_dict = yaml.safe_load(file)   
+        except yaml.YAMLError as exc:
+            print(exc)
+
+    return yaml_dict[dict_name]
+
 
 
 #=== MAIN ===

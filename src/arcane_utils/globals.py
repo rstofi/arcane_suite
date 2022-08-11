@@ -28,3 +28,8 @@ _MSV2_CORR_TYPE_DICT = {1:'I',
                         10:'XY',
                         11:'YX',
                         12:'YY'}
+
+#Define the allowed log levels
+global _VALID_LOG_LEVELS
+
+_VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
