@@ -107,6 +107,7 @@ rule split_OTF_scans_by_pointing:
         #' && touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log'
 
 #Rename the pointing field so later imaging processes can access it as a separate field
+#IAU specifications: http://cdsweb.u-strasbg.fr/Dic/iau-spec.html
 rule rename_OTF_pointing:
     input:
         '{0:s}'.format(OTF_OUTPUT_dir) +\

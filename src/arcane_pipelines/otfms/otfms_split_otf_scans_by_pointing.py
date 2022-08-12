@@ -6,6 +6,7 @@ import os
 import logging
 import argparse
 import subprocess
+import shutil
 
 from arcane_utils import pipeline
 from arcane_utils import time as a_time
@@ -58,9 +59,13 @@ def main():
     otf_field_ID_mapping = pipeline.get_var_from_yaml(yaml_path = yaml_path,
                                                   var_name = 'otf_field_ID_mapping')    
 
+    #NOTE: only a single target field is currently supported
+    #TO DO: implement a check for which target field the time value belongs
+    target_field = pipeline.get_var_from_yaml(yaml_path = yaml_path, var_name = 'target_fields')[0]
+
     otf_pointing_time = otf_field_ID_mapping[args.otf_id]
 
-    del otf_field_ID_mapping, yaml_path
+    #del otf_field_ID_mapping, yaml_path
 
     #Compute the selection range
     start_unix_time = otf_pointing_time - (split_timedelta * 0.5)
@@ -78,40 +83,28 @@ def main():
 
     logger.info('Creating casa executable at {0:s}'.format(casa_executable_path))
 
+
     output_MS = os.path.join(output_otf_dir,'otf_pointing_no_{0:s}.ms'.format(
                                                                     args.otf_id))
 
     split_task_string = "split(vis = '{0:s}',\n outputvis = '{1:s}',\
-\n timerange = '{2:s}',\n datacolumn = 'all')".format(
-                MS, output_MS,casa_timerange_selection_string)
+\n timerange = '{2:s}',\n datacolumn = 'data',\n field = '{3:s}')".format(
+                MS, output_MS,casa_timerange_selection_string,target_field)
 
     with open(casa_executable_path, 'w') as sconfig:
         sconfig.write(split_task_string)
 
 
-    logger.info('Runnin CASA split task...')
+    if os.path.isdir(output_MS):
+        logger.info('Output MS exist, deleting it before processing...')
+        shutil.rmtree(output_MS)
 
-    #create a run_casa.sh script
-    casa_task_path = os.path.join(output_otf_dir,'split_otf_pointing_no_{0:s}.sh'.format(
-                                                                    args.otf_id))
-    with open(casa_task_path, 'w') as sconfig:
-        sconfig.write('#!/bin/bash\n')
-        sconfig.write("casa --log2term --nogui --nologfile --nocrashreport -c {0:s}".format(
-                    casa_executable_path))
+    logger.info('Runnin CASA split task...')
 
     #Running the split task
 
-    casa_proc = subprocess.run("bash {0:s}".format(
-                casa_task_path), shell=True, capture_output=True)
-
-    #casa_proc = subprocess.run("casa --log2term --nogui --nologfile --nocrashreport -c {0:s}".format(
-    #                casa_executable_path), shell=True, capture_output=True,
-    #                executable='/bin/bash', env=env) #None of these help
-
-    #casa_proc = subprocess.run(['/bin/bash', '-i', '-c', 'casa', '--log2term',
-    #            '--nogui', '--nologfile', '--nocrashreport', '-c', '{0:s}'.format(
-    #                casa_executable_path)], shell=True, capture_output=True,
-    #                executable='/bin/bash', env=dict(os.environ)) #None of these help    
+    casa_proc = subprocess.run("casa --log2term --nogui --nologfile --nocrashreport -c {0:s}".format(
+                    casa_executable_path), shell=True, capture_output=True)
 
     out, err = casa_proc.stdout, casa_proc.stderr
     exitcode = casa_proc.returncode
@@ -125,12 +118,6 @@ def main():
     logger.info('Cleaning up...')
     if os.path.isfile(casa_executable_path):
         os.remove(casa_executable_path)
-    else:
-        logger.warning('No CASA executable found...')
-
-    logger.info('Cleaning up...')
-    if os.path.isfile(casa_task_path):
-        os.remove(casa_task_path)
     else:
         logger.warning('No CASA executable found...')
 

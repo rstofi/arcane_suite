@@ -199,6 +199,9 @@ def main():
         if target not in field_Name_ID_dict.keys():
             raise ValueError("Target field '{0:s}' not found in the input MS!".format(target))
  
+    if len(target_field_list) > 1:
+        logger.warning('Single target field processing is currently supported only!')
+
     del target
 
     #Check for scan data selection
@@ -328,6 +331,15 @@ def main():
                         split_timedelta))
         sconfig.write("casa_alias:\n  '{0:s}'\n".format(
                         casa_alias))
+
+        #List of calibrators and target fields
+        sconfig.write('calibrator_fields:\n')
+        for i in range(0,np.size(calibrator_list)):
+            sconfig.write("  - {0:s}\n".format(calibrator_list[i]))
+
+        sconfig.write('target_fields:\n')
+        for i in range(0,np.size(target_field_list)):
+            sconfig.write("  - {0:s}\n".format(target_field_list[i]))
 
         #Build field_ID dict
         sconfig.write('otf_field_ID_mapping:\n')
