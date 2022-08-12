@@ -81,11 +81,12 @@ def main():
                                                   var_name = 'split_timedelta')
 
     otf_field_ID_mapping = pipeline.get_var_from_yaml(yaml_path = yaml_path,
-                                                  var_name = 'otf_field_ID_mapping')    
+                                                  var_name = 'otf_field_ID_mapping')
 
     #Get the output MS path and executable path
     output_MS = os.path.join(output_otf_dir,'otf_pointing_no_{0:s}.ms'.format(
                                                                     args.otf_id))
+
     casa_executable_path = os.path.join(output_otf_dir,
                                         'split_otf_pointing_no_{0:s}.py'.format(
                                         args.otf_id))

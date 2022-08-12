@@ -86,7 +86,7 @@ rule split_calibrators:
         'mkdir {params.output_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
 
 #Split a single OTF pointing from the MS
-rule split_OTF_scans_by_pointing:
+rule split_otf_scans_by_pointing:
     input:
         '{0:s}'.format(MS_dir),
         '{0:s}'.format(POINTING_REF_file)
@@ -111,7 +111,7 @@ rule split_OTF_scans_by_pointing:
 
 #Rename the pointing field so later imaging processes can access it as a separate field
 #IAU specifications: http://cdsweb.u-strasbg.fr/Dic/iau-spec.html
-rule rename_OTF_pointing:
+rule rename_otf_pointing:
     input:
         '{0:s}'.format(OTF_OUTPUT_dir) +\
                 '/otf_pointing_no_{field_ID}.ms',
@@ -161,3 +161,6 @@ rule merge_scan_and_target:
 
 #TO DO: add this rule at the end of the pipeline
 #Purge all casa leftover files: the .last files
+
+#IDEA => add this functionality to the shell: part of the rule `all`
+# so the clean up happens when the pipeline is finished
