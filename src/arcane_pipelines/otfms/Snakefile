@@ -99,12 +99,15 @@ rule split_OTF_scans_by_pointing:
     params:
         output_otf_dir = OTF_OUTPUT_dir,
         log_dir = LOG_dir,
-        yaml_path = os.path.join(WORKING_dir, 'config.yaml')
+        yaml_path = os.path.join(WORKING_dir, 'config.yaml'),
+        casa_executable = os.path.join(OTF_OUTPUT_dir, 'split_otf_pointing_no_{field_ID}.py')
     shell:
-        'source ~/.bashrc && otfms_split_otf_scans_by_pointing -c {params.yaml_path} -i {wildcards.field_ID} ' +\
-        '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log'
-        #'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms' +\
-        #' && touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log'
+        'otfms_split_otf_scans_by_pointing -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log ; ' +\
+        'casa --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
+        '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log 2>&1 ; ' +\
+        'otfms_split_otf_scans_by_pointing -p -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log '
 
 #Rename the pointing field so later imaging processes can access it as a separate field
 #IAU specifications: http://cdsweb.u-strasbg.fr/Dic/iau-spec.html
@@ -115,8 +118,7 @@ rule rename_OTF_pointing:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_split.log'
     output:
-        directory('{0:s}'.format(OTF_OUTPUT_dir) +\
-                '/otf_pointing_no_{field_ID}.ms')
+        #Leave empty as snakemake overwrite directories
     log:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_renaming.log'
@@ -124,8 +126,7 @@ rule rename_OTF_pointing:
         output_otf_dir = OTF_OUTPUT_dir,
         log_dir = LOG_dir
     shell:
-        'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
-        ' && touch {params.log_dir}/renamed_otf_pointing_no_{wildcards.field_ID}_renaming.log'
+        'touch {params.log_dir}/renamed_otf_pointing_no_{wildcards.field_ID}_renaming.log'
 
 #Apply the phase rotation on the single pointing
 rule apply_phase_rotation:
@@ -133,8 +134,7 @@ rule apply_phase_rotation:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_renaming.log'
     output:
-        directory('{0:s}'.format(OTF_OUTPUT_dir) +\
-            '/otf_pointing_no_{field_ID}.ms')
+        #Leave empty as snakemake overwrite directories
     params:
         output_otf_dir = OTF_OUTPUT_dir,
         log_dir = LOG_dir
@@ -142,8 +142,7 @@ rule apply_phase_rotation:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_chgcentre.log'
     shell:
-        'mkdir {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
-        ' && touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log'
+        'touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log'
 
 #Merge phase-rotated OTF pointings and the calibrator(s) 
 rule merge_scan_and_target:
@@ -159,3 +158,6 @@ rule merge_scan_and_target:
         output_dir = OUTPUT_dir
     shell:
         'mkdir {params.output_dir}/final.ms'
+
+#TO DO: add this rule at the end of the pipeline
+#Purge all casa leftover files: the .last files
