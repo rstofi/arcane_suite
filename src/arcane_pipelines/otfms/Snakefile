@@ -114,7 +114,7 @@ rule split_otf_scans_by_pointing:
 rule rename_otf_pointing:
     input:
         '{0:s}'.format(OTF_OUTPUT_dir) +\
-                '/otf_pointing_no_{field_ID}.ms',
+        '/otf_pointing_no_{field_ID}.ms',
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_split.log'
     output:
@@ -149,6 +149,8 @@ rule merge_scan_and_target:
     input:
         expand('{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_chgcentre.log', field_ID=OTF_FIELD_IDs),
+        expand('{0:s}'.format(OTF_OUTPUT_dir) +\
+        '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs),
         '{0:1}/calibrators.ms'.format(OUTPUT_dir)
     output:
         directory('{0:s}/final.ms'.format(OUTPUT_dir))

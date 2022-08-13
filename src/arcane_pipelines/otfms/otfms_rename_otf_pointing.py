@@ -46,6 +46,8 @@ def main():
 
     if os.path.isdir(otf_MS_path) == False:
         raise FileNotFoundError('Single pointing OTF format MS not found as: {0:s}'.format(otf_MS_path))
+    else:
+        logger.info('Renaminf field(s) and terget(s) in {0:s}'.format(otf_MS_path))
 
     #Now get the RA and Dec values from the pointing reference fil
 
@@ -85,14 +87,22 @@ def main():
 
     #TO DO: implement this
 
-    otf_field_name = 'test_name'
+    otf_field_name = 'otf_name'
 
     #Now renaming the field
     otf_MS = ms_wrapper.create_MS_table_object(otf_MS_path)
 
-    fieldtable_path = ms_wrapper.get_MS_subtable_path(otf_MS, 'FIELD', close=False)
+    #TO DO: clean this part of the code and put to a separate function
 
-    fieldtable = ms_wrapper.create_MS_table_object(fieldtable_path, readonly=False)
+    #TO DO: raise warning, when more than one field/pointing/source are in the MS
+    # => probabyl only rename the first of the bunch
+    # => the warning should be raised in this code, the underlying function should
+    # take a list of new names and raise an error if the list lenght is not equal
+    # to the field/source etc.. name list
+
+    field_table_path = ms_wrapper.get_MS_subtable_path(otf_MS, 'FIELD', close=False)
+
+    fieldtable = ms_wrapper.create_MS_table_object(field_table_path, readonly=False)
 
     for i in fieldtable.rownumbers():
         
@@ -102,12 +112,29 @@ def main():
 
         print(fieldtable.getcol('NAME')[i])
 
-    #TO DO: raise warning for more than one fields and sources
-    #TO DO: rename the source as well!
-
     ms_wrapper.close_MS_table_object(fieldtable)
 
+    source_table_path = ms_wrapper.get_MS_subtable_path(otf_MS, 'SOURCE', close=False)
+    sourcetable = ms_wrapper.create_MS_table_object(source_table_path, readonly=False)
 
+    for i in sourcetable.rownumbers():
+        
+        print(sourcetable.getcol('NAME')[i])
+
+        sourcetable.putcell('NAME',i,otf_field_name)
+
+        print(sourcetable.getcol('NAME')[i])
+
+    ms_wrapper.close_MS_table_object(sourcetable)
+
+    pointing_table_path = ms_wrapper.get_MS_subtable_path(otf_MS, 'POINTING', close=False)
+    pointingtable = ms_wrapper.create_MS_table_object(pointing_table_path, readonly=False)
+
+    for i in pointingtable.rownumbers():
+        
+        print(pointingtable.getcol('NAME')[i])
+
+    ms_wrapper.close_MS_table_object(pointingtable)
 
     #Close MS
     ms_wrapper.close_MS_table_object(otf_MS)
