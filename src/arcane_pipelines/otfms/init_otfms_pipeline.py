@@ -344,7 +344,7 @@ def main():
         #Build field_ID dict
         sconfig.write('otf_field_ID_mapping:\n')
         for i in range(0,np.size(cross_matched_reference_times)):
-            sconfig.write("  '{0:d}' : {1:.4f}\n".format(i,
+            sconfig.write("  '{0:d}' : {1:f}\n".format(i,
                                         cross_matched_reference_times[i]))
 
     #=== Test if build was succesfull ===
