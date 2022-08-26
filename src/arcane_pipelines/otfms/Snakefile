@@ -24,6 +24,8 @@ The otfms pipleine builds the following file structure:
     |   |
     |   -- calibrators.ms #The claibrators
     |   |
+    |   -- otf_field_names.dat #The OTF ID's and the corresponding names
+    |   |
     |   -- otf_pointings/ #All the single OTF pointings
     |       |
     |       -- otf_pointing_no_0.ms
@@ -56,6 +58,7 @@ POINTING_REF_file = config['pointing_ref']
 LOG_dir = config['log_dir']
 OUTPUT_dir = config['output_dir']
 OTF_OUTPUT_dir = config['output_otf_dir']
+YAML_path = os.path.join(WORKING_dir, 'config.yaml')
 
 #The field_ID_mapping is an ID to UNIX timestamp mapping
 #We use only the keys in the Snakefile, but in the actual rules the configfile is
@@ -99,7 +102,7 @@ rule split_otf_scans_by_pointing:
     params:
         output_otf_dir = OTF_OUTPUT_dir,
         log_dir = LOG_dir,
-        yaml_path = os.path.join(WORKING_dir, 'config.yaml'),
+        yaml_path = YAML_path,
         casa_executable = os.path.join(OTF_OUTPUT_dir, 'split_otf_pointing_no_{field_ID}.py')
     shell:
         'otfms_split_otf_scans_by_pointing -c {params.yaml_path} -i {wildcards.field_ID} ' +\
@@ -124,9 +127,12 @@ rule rename_otf_pointing:
         '/otf_pointing_no_{field_ID}_renaming.log'
     params:
         output_otf_dir = OTF_OUTPUT_dir,
-        log_dir = LOG_dir
+        log_dir = LOG_dir,
+        yaml_path = YAML_path
     shell:
-        'touch {params.log_dir}/renamed_otf_pointing_no_{wildcards.field_ID}_renaming.log'
+        'otfms_rename_otf_pointing -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_renaming.log'
+        #'touch {params.log_dir}/renamed_otf_pointing_no_{wildcards.field_ID}_renaming.log'
 
 #Apply the phase rotation on the single pointing
 rule apply_phase_rotation:

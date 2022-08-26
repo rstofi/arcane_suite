@@ -16,6 +16,9 @@ from astropy.time import Time
 from arcane_utils import pipeline
 from arcane_utils import time as a_time
 
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+
 #=== Set up logging
 logger = logging.getLogger(__name__)
 
@@ -361,6 +364,120 @@ def get_pointing_and_times_from_reference_pointing_file(refrence_pointing_npz):
                 get_pointing_from_reference_pointing_file(refrence_pointing_npz)
 
     return time_array, ra_array, dec_array
+
+def get_closest_pointing_from_yaml(yaml_path, otf_ID):
+    """A core function used in multiple tasks in the `otfms` pipeline.
+
+    Basically based on the Snakemake yaml file, and an OTF field ID the closest
+    pointing time, RA and Dec coordinates are retrieved from the reference pointing
+    file.
+
+    Parameters
+    ----------
+    yaml_path: str
+        Path to the Snakemake yaml config file
+
+    otf_ID: str
+        The ID of the OTF pointing for which the values should be returned
+
+    Returns
+    -------
+    time_centre: float
+        The closest time value from the reference pointing file
+
+    ra_centre: float
+        The corresponding RA coordinate (in degrees)
+
+    dec_centre: float
+        The corresponding Dec coordinate (in degrees)
+
+    """
+
+    logger.info('Getting the closest coordinate from the reference pointing file ' \
+                + 'for OTF ID: {0:s}'.format(otf_ID))
+
+    #Get the RA and Dec values from the pointing reference fil
+    pointing_ref_path = pipeline.get_var_from_yaml(yaml_path = yaml_path,
+                                                  var_name = 'pointing_ref')
+
+    times, ra, dec = get_pointing_and_times_from_reference_pointing_file(pointing_ref_path)
+
+    #Select the time value and corresponding RA and Dec values
+    otf_field_ID_mapping = pipeline.get_var_from_yaml(yaml_path = yaml_path,
+                                            var_name = 'otf_field_ID_mapping')
+
+    time_crossmatch_threshold = pipeline.get_var_from_yaml(yaml_path = yaml_path,
+                                            var_name = 'time_crossmatch_threshold')
+
+    otf_pointing_time = otf_field_ID_mapping[otf_ID]
+
+    del otf_field_ID_mapping, yaml_path
+
+    #So now there is a truncating issue
+    #This is no slower than the exact check, which fails due to truncation issues
+    closest_time_arg =  np.argmin(np.fabs(times - otf_pointing_time))
+
+    time_centre = times[closest_time_arg]
+
+    if np.fabs(time_centre - otf_pointing_time) > time_crossmatch_threshold:
+        raise ValueError('No matching reference time found with the config time value!')
+
+    ra_centre = ra[closest_time_arg]
+    dec_centre = dec[closest_time_arg]
+
+    return time_centre, ra_centre[0], dec_centre[0]
+
+
+def generate_OTF_names_from_ra_dec(ra, dec, acronym='OTFasp'):
+    """Generate a string useful for renaming the OTF pointings, based on the
+    field cenral coordinates (RA, Dec, J2000, ICRS)
+
+    The IAU guidelines: https://cdsweb.u-strasbg.fr/Dic/iau-spec.html
+
+    My choice for naming convention:
+
+    Acroym: OTFasf (where the asp stands for arcane-suite pointing)
+    Sequence: JHHMMSS.ss+DDMMSS.ss
+
+    So the names should look like:
+
+        OTFasfJHHMMSS.ss+DDMMSS.ss        
+
+    NOTE: for future naming schemes, the asp part of the acronym should be changed
+        to represent the survey used
+
+    Parameters
+    ----------
+    ra: float
+        RA of the field centre in degrees
+
+    dec: float
+        Dec of the field centre in degrees
+
+    acronym: str, opt
+        The acronym part of the name
+
+    Returns
+    -------
+    name_string: str
+        The unique name string based on the acronym and coordinates
+
+    """
+
+    otf_pointing_coord = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
+
+    name_string = '{0:s}J{1:s}{2:s}'.format(
+                    acronym,
+                    otf_pointing_coord.ra.to_string(unit=u.hourangle,
+                                                    sep="", precision=2,
+                                                    pad=True),
+                    otf_pointing_coord.dec.to_string(unit=u.degree,
+                                                    sep="", precision=2,
+                                                    alwayssign=True, pad=True)
+                    )
+
+    return name_string
+
 
 #=== MAIN ===
 if __name__ == "__main__":

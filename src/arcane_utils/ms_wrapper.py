@@ -3,7 +3,7 @@ to be used across several pipelines of the suite.
 """
 
 __all__ = ['create_MS_table_object', 'close_MS_table_object', 'get_MS_subtable_path',
-        'get_fieldname_and_ID_list_dict_from_MS',
+        'get_fieldname_and_ID_list_dict_from_MS', 'rename_single_field',
         'get_time_based_on_field_names_and_scan_IDs']
 
 
@@ -392,6 +392,103 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
 
     else:
         return times
+
+def rename_single_field(mspath,
+                        field_ID,
+                        new_field_name,
+                        source = False,
+                        pointing = False,
+                        close = False):
+    """Renaming a single field based on it's ID.
+
+    Optionally the NAME variable in the SOURCE and the POINTING tables with the
+    *same* ID can be remaned as well.
+
+    The code literally takes the given row number and overwrite the name cell.
+
+    NOTE: a field can have multiple sources, so set the source and pointing to True
+        carefully!
+
+    TO DO: write a separate function that can overwrite/rename the sources in the
+        SOURCE table separately
+
+    Parameters
+    ----------
+    mspath: str
+        The input MS path or a ``casacore.tables.table.table`` object
+
+    scan_ID: int
+        The selected `SCAN_ID` to rename. This is equivalent to the row number in
+        the FIELD table
+
+    new_field_name: str
+        The new `NAME` values written to the target tables.
+
+    source: bool, opt
+        If True, the NAME value with the same ID in the FIELD table is overwritten.
+
+    pointing: bool, opt
+        If True, the NAME value with the same ID in the POINTING table is overwritten.
+
+    close:
+        If True the MS will be closed
+
+    Returns
+    -------
+    Overwite the input MS NAME cell of the specified tables and rows
+
+    """
+
+    MS = create_MS_table_object(mspath)
+
+    #Seclect the tables to overwrite
+    if source and pointing:
+        logger.info('Renaming the NAME cell in row {0:d} '.format(
+            field_ID) \
+            + 'in tables: FIELD, SOURCE, POINTING')
+        table_list = ['FIELD', 'SOURCE', 'POINTING']
+    elif source:
+        logger.info('Renaming the NAME cell in row {0:d} '.format(
+            field_ID) \
+            + 'in tables: FIELD, SOURCE')
+        table_list = ['FIELD', 'SOURCE']
+    elif pointing:
+        logger.info('Renaming the NAME cell in row {0:d} '.format(
+            field_ID) \
+            + 'in tables: FIELD, POINTING')
+        table_list = ['FIELD', 'POINTING']
+    else:
+        logger.info('Renaming the NAME cell in row {0:d} '.format(
+            field_ID) \
+            + 'in table: FIELD')
+        table_list = ['FIELD']
+
+    #Rename
+    for ftable_name in table_list:
+        ftable_path = get_MS_subtable_path(MS, ftable_name, close=False)
+
+        ftable = create_MS_table_object(ftable_path, readonly=False)
+
+        if ftable.rownumbers() == []:
+            logger.warning('The table {0:s} is empty!'.format(
+                ftable_name))
+        else:
+            if field_ID not in ftable.rownumbers():
+                raise ValueError('Invalid field ID provided!')
+
+            logger.debug('Original NAME in table {0:s}: {1:s}'.format(
+                        ftable_name, ftable.getcol('NAME')[field_ID]))
+
+            ftable.putcell('NAME', field_ID, new_field_name)
+
+            logger.debug('New NAME in table {0:s}: {1:s}'.format(
+                        ftable_name, ftable.getcol('NAME')[field_ID]))
+
+        close_MS_table_object(ftable)
+
+    if close:
+        close_MS_table_object(MS)
+
 
 #=== MAIN ===
 if __name__ == "__main__":

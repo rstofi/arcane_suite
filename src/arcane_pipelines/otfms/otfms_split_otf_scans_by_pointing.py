@@ -118,8 +118,12 @@ def main():
     \n timerange = '{2:s}',\n datacolumn = 'data',\n field = '{3:s}')".format(
                     MS, output_MS,casa_timerange_selection_string,target_field)
 
+        listobs_string = "listobs(vis = '{0:s}')".format(output_MS)
+
         with open(casa_executable_path, 'w') as sconfig:
             sconfig.write(split_task_string)
+            sconfig.write('\n')
+            sconfig.write(listobs_string)
 
         #Because casa does not like to overwrite MS with the split task
         if os.path.isdir(output_MS):
