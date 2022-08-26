@@ -50,13 +50,19 @@ class CustomColorFormatter(logging.Formatter):
         return formatter.format(record)
 
 #=== Functions ===
-def init_logger(log_level='INFO', color=False):
+def init_logger(log_level = 'INFO', color = False, log_file = None, null_logger = False):
     """Initialise the logger and formatting. This is a convinience function
 
     Parameters
     ----------
     log_level: str, optional
         The level of the logger
+
+    color: bool, optional
+        If True the logger will be coloured by levels
+
+    log_file: str, optional
+        If given the log will go to this file rather than to stdout
 
     Returns
     -------
@@ -80,7 +86,12 @@ def init_logger(log_level='INFO', color=False):
     else:
         logger.setLevel(logging.NOTSET)
 
-    handler = logging.StreamHandler(sys.stdout)
+    if null_logger:
+        handler = logging.NullHandler()
+    elif log_file == None:
+        handler = logging.StreamHandler(sys.stdout)
+    else:
+        handler = logging.FileHandler(log_file)
 
     if color:
         handler.setFormatter(CustomColorFormatter()) #Add coloured ciustom for logging

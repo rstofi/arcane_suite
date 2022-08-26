@@ -466,6 +466,8 @@ def generate_OTF_names_from_ra_dec(ra, dec, acronym='OTFasp'):
 
     otf_pointing_coord = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
 
+    print(otf_pointing_coord.to_string('hmsdms', precision=4))
+
     name_string = '{0:s}J{1:s}{2:s}'.format(
                     acronym,
                     otf_pointing_coord.ra.to_string(unit=u.hourangle,
@@ -477,6 +479,15 @@ def generate_OTF_names_from_ra_dec(ra, dec, acronym='OTFasp'):
                     )
 
     return name_string
+
+def generate_position_string_for_chgcentre(ra,dec):
+    """
+    """
+
+    otf_pointing_coord = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
+
+    return otf_pointing_coord.to_string('hmsdms', precision=4)
+
 
 
 #=== MAIN ===

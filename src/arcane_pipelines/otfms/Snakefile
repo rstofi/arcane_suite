@@ -72,6 +72,7 @@ OTF_FIELD_IDs = list(OTF_FIELD_ID_MAPPING.keys())
 #=== Rules ===
 rule all:
     input:
+        '{0:s}/otf_field_names.dat'.format(WORKING_dir),
         '{0:s}/final.ms'.format(OUTPUT_dir)
 
 #Split the calibrator field(s) from input MS
@@ -87,6 +88,23 @@ rule split_calibrators:
         log_dir = LOG_dir
     shell:
         'mkdir {params.output_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
+
+#List the new OTF pointing names
+rule list_new_otf_field_names:
+    input:
+        '{0:s}'.format(YAML_path)
+    output:
+        '{0:s}/otf_field_names.dat'.format(WORKING_dir)
+    log:
+        '{0:s}'.format(LOG_dir) +\
+        '/list_new_otf_field_names.log'
+    params:
+        log_dir = LOG_dir,
+        yaml_path = YAML_path,
+        output_fname = '{0:s}/otf_field_names.dat'.format(WORKING_dir)
+    shell:
+        'otfms_otf_pointing_correction -c {params.yaml_path} -sn -o {params.output_fname} ' +\
+        '> {params.log_dir}/list_new_otf_field_names.log'
 
 #Split a single OTF pointing from the MS
 rule split_otf_scans_by_pointing:
@@ -130,9 +148,8 @@ rule rename_otf_pointing:
         log_dir = LOG_dir,
         yaml_path = YAML_path
     shell:
-        'otfms_rename_otf_pointing -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        'otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_renaming.log'
-        #'touch {params.log_dir}/renamed_otf_pointing_no_{wildcards.field_ID}_renaming.log'
 
 #Apply the phase rotation on the single pointing
 rule apply_phase_rotation:
@@ -143,12 +160,17 @@ rule apply_phase_rotation:
         #Leave empty as snakemake overwrite directories
     params:
         output_otf_dir = OTF_OUTPUT_dir,
-        log_dir = LOG_dir
+        log_dir = LOG_dir,
+        yaml_path = YAML_path
     log:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_chgcentre.log'
     shell:
-        'touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log'
+        'chgcentre {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
+        '$(otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        '-ds -l {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log) ' +\
+        '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log 2>&1'
+        #'touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log'
 
 #Merge phase-rotated OTF pointings and the calibrator(s) 
 rule merge_scan_and_target:
