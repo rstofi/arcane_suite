@@ -56,7 +56,7 @@ def main():
                     action='store', type=str)
 
     parser.add_argument('-fr', '--full_rule_run', required=False,
-                        help='If set, the code attempts to call casa trough subprocess.',
+                        help='If set, the code attempts to call casa trough subprocess',
                         action='store_true')
 
     parser.add_argument('-p', '--purge_executable', required=False,
@@ -71,8 +71,8 @@ def main():
     #Get parameters from the config.yaml file
     yaml_path = args.config_file
 
-    MS = pipeline.get_var_from_yaml(yaml_path = yaml_path,
-                                                  var_name = 'MS')
+    #MS = pipeline.get_var_from_yaml(yaml_path = yaml_path,
+    #                                              var_name = 'MS')
 
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path = yaml_path,
                                                   var_name = 'output_otf_dir')
@@ -95,7 +95,8 @@ def main():
     if not args.purge_executable:
         #NOTE: only a single target field is currently supported
         #TO DO: implement a check for which target field the time value belongs
-        target_field = pipeline.get_var_from_yaml(yaml_path = yaml_path, var_name = 'target_fields')[0]
+        target_field = pipeline.get_var_from_yaml(yaml_path = yaml_path,
+                                                var_name = 'target_fields')[0]
 
         otf_pointing_time = otf_field_ID_mapping[args.otf_id]
 

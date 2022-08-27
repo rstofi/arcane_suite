@@ -123,11 +123,11 @@ rule split_otf_scans_by_pointing:
         yaml_path = YAML_path,
         casa_executable = os.path.join(OTF_OUTPUT_dir, 'split_otf_pointing_no_{field_ID}.py')
     shell:
-        'otfms_split_otf_scans_by_pointing -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        'otfms_split -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log ; ' +\
         'casa --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log 2>&1 ; ' +\
-        'otfms_split_otf_scans_by_pointing -p -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        'otfms_split -p -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log '
 
 #Rename the pointing field so later imaging processes can access it as a separate field

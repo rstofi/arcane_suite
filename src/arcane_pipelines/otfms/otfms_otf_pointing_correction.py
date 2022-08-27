@@ -1,4 +1,5 @@
-"""The command line tool for the Snakemake rule: `rename_otf_pointing`
+"""The command line tool used in the Snakemake rules: `rename_otf_pointing`,
+`apply_phase_rotation` and `list_new_otf_field_names`
 """
 
 import sys

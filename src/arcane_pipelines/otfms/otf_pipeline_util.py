@@ -482,6 +482,16 @@ def generate_OTF_names_from_ra_dec(ra, dec, acronym='OTFasp'):
 
 def generate_position_string_for_chgcentre(ra,dec):
     """
+
+    Parameters
+    ----------
+    ra: float
+        RA of the field centre in degrees
+
+    dec: float
+        Dec of the field centre in degrees
+
+
     """
 
     otf_pointing_coord = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
