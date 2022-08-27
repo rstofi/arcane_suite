@@ -71,8 +71,8 @@ def main():
     #Get parameters from the config.yaml file
     yaml_path = args.config_file
 
-    #MS = pipeline.get_var_from_yaml(yaml_path = yaml_path,
-    #                                              var_name = 'MS')
+    MS = pipeline.get_var_from_yaml(yaml_path = yaml_path,
+                                                  var_name = 'MS')
 
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path = yaml_path,
                                                   var_name = 'output_otf_dir')

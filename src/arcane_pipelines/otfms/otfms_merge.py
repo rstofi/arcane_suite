@@ -7,17 +7,19 @@ import logging
 import argparse
 import subprocess
 import shutil
+import numpy as np
 
 from arcane_utils import pipeline
+from arcane_utils import misc as pmisc
 
 #=== Set logging
 logger = pipeline.init_logger()
 
 #=== Functions ===
 def main():
-	"""
+    """
 
-	"""
+    """
     #=== Set arguments
     parser = argparse.ArgumentParser()
 
@@ -25,7 +27,7 @@ def main():
                     help='Snakemake yaml configuration file for the otfms pipeline',
                     action='store', type=str)
 
-	parser.add_argument('-o', '--output_ms_name', required=True,
+    parser.add_argument('-o', '--output_ms_name', required=True,
                     help='The name of the output MS, with the .ms extension but without the absolute path',
                     action='store', type=str)
 
@@ -58,21 +60,55 @@ def main():
     output_MS = os.path.join(output_dir,'{0:s}'.format(args.output_ms_name))
 
     casa_executable_path = os.path.join(output_dir,
-                                        'split_otf_pointing_no_{0:s}.py'.format(
-                                        args.otf_id))
+                                        'merge_otf_pointings.py')
 
 
     #=== Create executable
     if not args.purge_executable:
 
-    	list_of_otf_ms_string = ''
-
-    	merge_task_string = "concat('vis={0:s}', concatvis={1:s}, ".format(
-    							list_of_otf_ms_string, output_MS) +\
-    						"respectname=True)"
+        otf_field_ID_mapping = pipeline.get_var_from_yaml(yaml_path = yaml_path,
+                                        var_name = 'otf_field_ID_mapping')
 
 
-    	print(merge_task_string)
+        #Put all otf fields into a single list and convertthe list into a string
+        list_of_otf_pointings = []
+
+        for ID in otf_field_ID_mapping.keys():
+            otf_ms_path = os.path.join(output_otf_dir,'otf_pointing_no_{0:s}.ms'.format(
+                                                                    ID))
+
+            list_of_otf_pointings.append("'" + otf_ms_path + "'\n")#Add quotation marks
+            #The \n is to make more human readable and if we have hundreds of fields
+            #not to run into errors with long single lines... if that is a thing
+
+        logger.info('Selected {0:d} OTF pointings to merge'.format(
+                                                np.size(list_of_otf_pointings)))
+
+        list_of_otf_ms_string = pmisc.convert_list_to_string(list_of_otf_pointings)
+
+        logger.info('Creating casa executable at {0:s}'.format(casa_executable_path))
+
+        merge_task_string = "concat(vis={0:s}, concatvis='{1:s}', ".format(
+                                list_of_otf_ms_string, output_MS) +\
+                            "respectname=True)"
+
+        listobs_string = "listobs(vis = '{0:s}')".format(output_MS)
+
+        with open(casa_executable_path, 'w') as sconfig:
+            sconfig.write(merge_task_string)
+            sconfig.write('\n')
+            sconfig.write(listobs_string)
+
+        #Because casa appends the MS with the concat task
+        if os.path.isdir(output_MS):
+            logger.info('Output MS exist, deleting it before moving on to processing...')
+            shutil.rmtree(output_MS)
+
+        #This is a logging logical placement
+        if not args.full_rule_run:
+            logger.info('Casa executable sript created, please run it externally')
+
+            sys.exit(0)
 
 
 #=== MAIN ===
