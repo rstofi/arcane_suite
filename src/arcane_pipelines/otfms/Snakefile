@@ -183,11 +183,20 @@ rule merge_scan_and_target:
     output:
         directory('{0:s}/final.ms'.format(OUTPUT_dir))
     log:
-        '{0:s}/merge_scan_and_target.log'.format(LOG_dir)
+        '{0:s}/merge_scans.log'.format(LOG_dir)
     params:
-        output_dir = OUTPUT_dir
+        yaml_path = YAML_path,
+        log_dir = LOG_dir,
+        output_dir = OUTPUT_dir,
+        output_MS = os.path.join(OUTPUT_dir,'final.ms'),
+        casa_executable = os.path.join(OUTPUT_dir, 'merge_otf_pointings.py')
     shell:
-        'mkdir {params.output_dir}/final.ms'
+        'otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\
+        '> {params.log_dir}/merge_scans.log ; ' +\
+        'casa --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
+        '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
+        'otfms_merge -p -c {params.yaml_path} -o {params.output_MS} ' +\
+        '>> {params.log_dir}/merge_scans.log '
 
 #TO DO: add this rule at the end of the pipeline
 #Purge all casa leftover files: the .last files

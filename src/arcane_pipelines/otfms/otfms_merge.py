@@ -110,6 +110,46 @@ def main():
 
             sys.exit(0)
 
+    #=== Attempting to run casa via subprocess
+    if args.full_rule_run:
+        logger.info('Runnin CASA split task...')
+
+        #Running the split task
+
+        casa_proc = subprocess.run("casa --log2term --nogui --nologfile " +\
+                                            "--nocrashreport -c {0:s}".format(
+                        casa_executable_path), shell=True, capture_output=True)
+
+        out, err = casa_proc.stdout, casa_proc.stderr
+        exitcode = casa_proc.returncode
+
+        #Because casa logs weirdly
+        logger.info(out.decode('utf-8'))
+        logger.info(err.decode('utf-8'))
+
+        if exitcode != 0:
+            raise ValueError('The casa subprocess exited with non-zero exit code (see the log above for more info)!')
+
+        del out, err, exitcode
+
+    #=== Removing the CASA executable
+    if args.purge_executable or args.full_rule_run:
+        logger.info('Cleaning up...')
+        if os.path.isfile(casa_executable_path):
+            os.remove(casa_executable_path)
+        else:
+            logger.warning('No CASA executable found...')
+
+    #=== Exit
+    if args.purge_executable or args.full_rule_run:
+        logger.info('The created casa executable purged')
+
+        if os.path.isdir(output_MS):
+            logger.info('Output MS found')
+        else:
+            logger.warning('No output MS found!')
+
+    sys.exit(0)
 
 #=== MAIN ===
 if __name__ == "__main__":
