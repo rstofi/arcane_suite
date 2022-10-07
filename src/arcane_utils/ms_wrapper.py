@@ -2,9 +2,13 @@
 to be used across several pipelines of the suite.
 """
 
-__all__ = ['create_MS_table_object', 'close_MS_table_object', 'get_MS_subtable_path',
-        'get_fieldname_and_ID_list_dict_from_MS', 'rename_single_field',
-        'get_time_based_on_field_names_and_scan_IDs']
+__all__ = [
+    'create_MS_table_object',
+    'close_MS_table_object',
+    'get_MS_subtable_path',
+    'get_fieldname_and_ID_list_dict_from_MS',
+    'rename_single_field',
+    'get_time_based_on_field_names_and_scan_IDs']
 
 
 import sys
@@ -18,12 +22,14 @@ from arcane_utils import misc
 from arcane_utils.globals import _ACK
 from arcane_utils import time as a_time
 
-#=== Set up logging
+# === Set up logging
 logger = logging.getLogger(__name__)
 
-#=== Functions ===
+# === Functions ===
+
+
 def create_MS_table_object(mspath, readonly=True, **kwargs):
-    """This function aims to speed up other bits of this module, 
+    """This function aims to speed up other bits of this module,
     by returning a ``casacore.tables.table.table`` object.
     The trick is, that the ``mspath`` argument can be either a string i.e. the path
     to the MS which will be read in and returned, **or** it can be already an
@@ -46,19 +52,24 @@ def create_MS_table_object(mspath, readonly=True, **kwargs):
         The in-memory Measurement Set
 
     """
-    #create an empty MS in-memory to check the object type: the working solution
-    MS_type_tmp = casatables.table('',casatables.maketabdesc([casatables.makescacoldesc('DATA',0)]),memorytable=True,ack=False)
+    # create an empty MS in-memory to check the object type: the working
+    # solution
+    MS_type_tmp = casatables.table('', casatables.maketabdesc(
+        [casatables.makescacoldesc('DATA', 0)]), memorytable=True, ack=False)
 
-    #if type(mspath) == 'casacore.tables.table.table': #This approach does not work
-    if type(mspath) == type(MS_type_tmp):
+    # if type(mspath) == 'casacore.tables.table.table': #This approach does
+    # not work
+    if isinstance(mspath, type(MS_type_tmp)):
         #logger.debug('MS already open...')
         MS_type_tmp.close()
         return mspath
     else:
-        logger.debug('Open MS: {0:s}'.format(str(mspath))) #We know it is a string in this case
+        # We know it is a string in this case
+        logger.debug('Open MS: {0:s}'.format(str(mspath)))
         MS = casatables.table(mspath, ack=_ACK, readonly=readonly)
         MS_type_tmp.close()
         return MS
+
 
 def close_MS_table_object(mspath):
     """This bit of code should be called at the end of whan working with an MS.
@@ -75,16 +86,19 @@ def close_MS_table_object(mspath):
         Closes the MS
 
     """
-    MS_type_tmp = casatables.table('',casatables.maketabdesc([casatables.makescacoldesc('DATA',0)]),memorytable=True,ack=False)
+    MS_type_tmp = casatables.table('', casatables.maketabdesc(
+        [casatables.makescacoldesc('DATA', 0)]), memorytable=True, ack=False)
 
-    #if type(mspath) == 'casacore.tables.table.table':
-    if type(mspath) == type(MS_type_tmp):
+    # if type(mspath) == 'casacore.tables.table.table':
+    if isinstance(mspath, type(MS_type_tmp)):
         logger.debug('Close MS')
 
         MS = create_MS_table_object(mspath)
         MS.close()
     else:
-        logger.debug('Input was not a <casacore.tables.table.table> object... continuing.')
+        logger.debug(
+            'Input was not a <casacore.tables.table.table> object... continuing.')
+
 
 def get_MS_subtable_path(mspath, subtable_name, close=False):
     """Subroutine to generate absolute paths for MS subtables using the right
@@ -113,29 +127,31 @@ def get_MS_subtable_path(mspath, subtable_name, close=False):
     """
     MS = create_MS_table_object(mspath)
 
-    #List of subtables:
-    #print(MS.keywordnames())
+    # List of subtables:
+    # print(MS.keywordnames())
 
-    #Select all substrings containing `subtable_name` and select the first result
-    #NOTE: only one table sould exist named `/subtable_name`
-    subtable_path = [subtables_path for subtables_path in MS.getsubtables() if '/' + subtable_name in subtables_path][0]
+    # Select all substrings containing `subtable_name` and select the first result
+    # NOTE: only one table sould exist named `/subtable_name`
+    subtable_path = [subtables_path for subtables_path in MS.getsubtables(
+    ) if '/' + subtable_name in subtables_path][0]
 
-    #Get the index of the dash using reverse
+    # Get the index of the dash using reverse
     subtable_dash_index = subtable_path.rindex("/")
 
     subtable_path = subtable_path[:subtable_dash_index] + \
-                    "::" + subtable_path[subtable_dash_index+1:]
+        "::" + subtable_path[subtable_dash_index + 1:]
 
     if close:
-        close_MS_table_object(MS)    
+        close_MS_table_object(MS)
 
     return subtable_path
 
+
 def get_fieldname_and_ID_list_dict_from_MS(mspath,
-                                        scan_ID = False,
-                                        close = False,
-                                        ant1_ID = 0,
-                                        ant2_ID = 1):
+                                           scan_ID=False,
+                                           close=False,
+                                           ant1_ID=0,
+                                           ant2_ID=1):
     """Generate the field name -- ID list pairs or with `scan_ID` set to True,
     the scan IDs returned instead of the field IDs, from an MS as a dictionary.
 
@@ -147,7 +163,7 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
             the CNSS data set. The same applies to scans obviously
 
     NOTE: this routine is sub-optimal for scan IDs as it is working with the MAIN
-            table. It uses the informatiuon in the FIELD table for getting the 
+            table. It uses the informatiuon in the FIELD table for getting the
             fielkd names and IDs though.
 
     NOTE: to **speed up** the code, I only select data associated with one baseline.
@@ -176,9 +192,9 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
         when e.g. an MS is made out from multiple observations, where one is missing
         an antenna, this parameter matters! Please be carefule na know your data
         beforehand.
-    
+
     ant2_ID: int, opt
-        The ID of the second antenna defining the baseline used for the selection. 
+        The ID of the second antenna defining the baseline used for the selection.
         The same caveats as for `ref_ant_ID` applyes here.
 
     Returns
@@ -188,47 +204,51 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
 
     """
     if ant1_ID == ant2_ID:
-        raise ValueError('Only cross-correltion baselines are allowed for field and scan ID queryes!')
+        raise ValueError(
+            'Only cross-correltion baselines are allowed for field and scan ID queryes!')
 
-    #Note that ANTENNA1 *always* have a smaller ID number than ANTENNA2 in an MS
+    # Note that ANTENNA1 *always* have a smaller ID number than ANTENNA2 in an MS
     # So for a general case, we need to swap the two IDs if ant1_ID > ant2_ID
     if ant1_ID > ant2_ID:
-        logger.debug('Swapping ant1_ID and ant2_ID to make sure baseline exists in MS')
-        ant1_ID, ant2_ID = ant2_ID, ant1_ID #Swapping two variables without a teporary variable
+        logger.debug(
+            'Swapping ant1_ID and ant2_ID to make sure baseline exists in MS')
+        # Swapping two variables without a teporary variable
+        ant1_ID, ant2_ID = ant2_ID, ant1_ID
 
     MS = create_MS_table_object(mspath)
 
-    fieldtable_path = get_MS_subtable_path(MS,'FIELD', close=False)
+    fieldtable_path = get_MS_subtable_path(MS, 'FIELD', close=False)
 
-    #Open `FIELD` table and read the list of antennas
+    # Open `FIELD` table and read the list of antennas
     fieldtable = create_MS_table_object(fieldtable_path)
 
-    #Set up the empty list
+    # Set up the empty list
     fieldname_ID_dict = {}
 
-    #The row number in the ANTENNA table corresponds to the field ID
-    #See: https://casaguides.nrao.edu/index.php?title=Measurement_Set_Contents
+    # The row number in the ANTENNA table corresponds to the field ID
+    # See: https://casaguides.nrao.edu/index.php?title=Measurement_Set_Contents
 
-    #I *assume* the same thing is true for the FIELD ID
+    # I *assume* the same thing is true for the FIELD ID
 
-    #Loop trough the rows in the ANTENNA table and build the dict
+    # Loop trough the rows in the ANTENNA table and build the dict
     for i in fieldtable.rownumbers():
-        
+
         field_name = fieldtable.getcol('NAME')[i]
-        
+
         if field_name not in list(fieldname_ID_dict.keys()):
             fieldname_ID_dict[field_name] = [i]
         else:
             fieldname_ID_dict[field_name].append(i)
-    
+
     del i
 
     close_MS_table_object(fieldtable)
 
-    #The fieldname ID dict has to be creted to generate the scanname_ID_disct:
+    # The fieldname ID dict has to be creted to generate the scanname_ID_disct:
     if scan_ID:
-        #NOTE this is a really slow sub-routine!
-        logger.debug('Matching scan IDs to FIELD_NAMES. This can take some time...')
+        # NOTE this is a really slow sub-routine!
+        logger.debug(
+            'Matching scan IDs to FIELD_NAMES. This can take some time...')
 
         scanname_ID_disct = {}
 
@@ -236,22 +256,25 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
 
         for field_name in fieldnames:
 
-            field_selection_string = misc.convert_list_to_string(list(fieldname_ID_dict[field_name]))
+            field_selection_string = misc.convert_list_to_string(
+                list(fieldname_ID_dict[field_name]))
 
-            #Note that string formatting (number of whitespaces or tabs) does not matter
+            # Note that string formatting (number of whitespaces or tabs) does
+            # not matter
             scan_qtable = MS.query(query='FIELD_ID IN {0:s} \
                             AND ANTENNA1 == {1:d} \
                             AND ANTENNA2 == {2:d}'.format(
-                        field_selection_string, ant1_ID, ant2_ID),
-                        columns='SCAN_NUMBER')
+                field_selection_string, ant1_ID, ant2_ID),
+                columns='SCAN_NUMBER')
 
-            scanname_ID_disct[field_name] = list(np.unique(scan_qtable.getcol('SCAN_NUMBER')))
+            scanname_ID_disct[field_name] = list(
+                np.unique(scan_qtable.getcol('SCAN_NUMBER')))
 
         del field_name
 
         if close:
             close_MS_table_object(MS)
-    
+
         return scanname_ID_disct
 
     else:
@@ -261,13 +284,14 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
 
         return fieldname_ID_dict
 
+
 def get_time_based_on_field_names_and_scan_IDs(mspath,
-                                            field_names = None,
-                                            scan_IDs = None,
-                                            to_UNIX = True,
-                                            close = False,
-                                            ant1_ID = 0,
-                                            ant2_ID = 1):
+                                               field_names=None,
+                                               scan_IDs=None,
+                                               to_UNIX=True,
+                                               close=False,
+                                               ant1_ID=0,
+                                               ant2_ID=1):
     """Get an array containing the time values for a given field and scan selection.
 
     This is the core function to get the TIME array for given fields and or scans.
@@ -300,7 +324,7 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
     to_UNIX: bool, optional
         If False, `TIME` in the native frame values (assumed to be MJD) are returned.
         If True, the output is covrted to UNXI formatting (default).
-    
+
     close:
         If True the MS will be closed
 
@@ -316,74 +340,80 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
         An array containing the time values
 
     """
-    if type(field_names) != list and field_names != None:
+    if not isinstance(field_names, list) and field_names is not None:
         raise TypeError('Wrong format for input field names!')
 
-    if type(scan_IDs) != list and scan_IDs != None:
+    if not isinstance(scan_IDs, list) and scan_IDs is not None:
         raise TypeError('Wrong format for input scan IDs!')
 
     if ant1_ID == ant2_ID:
-        raise ValueError('Only cross-correltion baselines are allowed for time selecttion queryes!')
+        raise ValueError(
+            'Only cross-correltion baselines are allowed for time selecttion queryes!')
 
-    #Note that ANTENNA1 *always* have a smaller ID number than ANTENNA2 in an MS
+    # Note that ANTENNA1 *always* have a smaller ID number than ANTENNA2 in an MS
     # So for a general case, we need to swap the two IDs if ant1_ID > ant2_ID
 
     if ant1_ID > ant2_ID:
-        logger.debug('Swapping ant1_ID and ant2_ID to make sure baseline exists in MS')
-        ant1_ID, ant2_ID = ant2_ID, ant1_ID #Swapping two variables without a teporary variable
+        logger.debug(
+            'Swapping ant1_ID and ant2_ID to make sure baseline exists in MS')
+        # Swapping two variables without a teporary variable
+        ant1_ID, ant2_ID = ant2_ID, ant1_ID
 
     MS = create_MS_table_object(mspath)
 
     #This is fast
     field_Name_ID_dict = get_fieldname_and_ID_list_dict_from_MS(mspath)
 
-    #Get the field selection
-    if field_names == None:
+    # Get the field selection
+    if field_names is None:
         field_selection_string = misc.convert_list_to_string(
             [field_Name_ID_dict[field_name][0] for field_name in field_Name_ID_dict.keys()])
-    
-    else:    
-        #Select the field ID based on the name(s)
-        field_selection_string = misc.convert_list_to_string(
-                        [field_Name_ID_dict[field_name][0] for field_name in field_names])
 
-    #Query the data based on the field and scan ID selection
-    if scan_IDs == None:
+    else:
+        # Select the field ID based on the name(s)
+        field_selection_string = misc.convert_list_to_string(
+            [field_Name_ID_dict[field_name][0] for field_name in field_names])
+
+    # Query the data based on the field and scan ID selection
+    if scan_IDs is None:
         time_qtable = MS.query(query='FIELD_ID IN {0:s} \
                                 AND ANTENNA1 == {1:d} \
                                 AND ANTENNA2 == {2:d}'.format(
-                            field_selection_string, ant1_ID, ant2_ID),
-                            columns='TIME')
+            field_selection_string, ant1_ID, ant2_ID),
+            columns='TIME')
 
     else:
-        #Select the scna ID's
+        # Select the scna ID's
         scan_selection_string = misc.convert_list_to_string(scan_IDs)
 
         time_qtable = MS.query(query='FIELD_ID IN {0:s} \
                                 AND SCAN_NUMBER IN {1:s} \
                                 AND ANTENNA1 == {2:d} \
                                 AND ANTENNA2 == {3:d}'.format(
-                            field_selection_string, scan_selection_string,
-                            ant1_ID, ant2_ID),
-                            columns='TIME')
+            field_selection_string, scan_selection_string,
+            ant1_ID, ant2_ID),
+            columns='TIME')
 
-    #Get the time values in the native format
+    # Get the time values in the native format
     times = time_qtable.getcol('TIME')
-    
+
     if np.size(times) == 0:
         warnings.warn('No TIME data is selected!')
         #logger.warning('No TIME data is selected!')
 
-    #Raise warning if not only unique times retrieved
+    # Raise warning if not only unique times retrieved
     elif np.size(times) != np.size(np.unique(times)):
-        logger.warning('Not only uniqe TIME data is selected, please check your MS and data selection!')
+        logger.warning(
+            'Not only uniqe TIME data is selected, please check your MS and data selection!')
 
     if close:
         close_MS_table_object(MS)
 
     if to_UNIX:
-        #Do a 'soft' check for the input values to make sure UNIX format is returned
-        if a_time.soft_check_if_time_is_UNIX(a_time.convert_MJD_to_UNIX(times[0])):
+        # Do a 'soft' check for the input values to make sure UNIX format is
+        # returned
+        if a_time.soft_check_if_time_is_UNIX(
+                a_time.convert_MJD_to_UNIX(times[0])):
             return a_time.convert_MJD_to_UNIX(times)
         elif a_time.soft_check_if_time_is_UNIX(times[0]):
             return times
@@ -393,12 +423,13 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
     else:
         return times
 
+
 def rename_single_field(mspath,
                         field_ID,
                         new_field_name,
-                        source = False,
-                        pointing = False,
-                        close = False):
+                        source=False,
+                        pointing=False,
+                        close=False):
     """Renaming a single field based on it's ID.
 
     Optionally the NAME variable in the SOURCE and the POINTING tables with the
@@ -441,29 +472,29 @@ def rename_single_field(mspath,
 
     MS = create_MS_table_object(mspath)
 
-    #Seclect the tables to overwrite
+    # Seclect the tables to overwrite
     if source and pointing:
         logger.info('Renaming the NAME cell in row {0:d} '.format(
-            field_ID) \
+            field_ID)
             + 'in tables: FIELD, SOURCE, POINTING')
         table_list = ['FIELD', 'SOURCE', 'POINTING']
     elif source:
         logger.info('Renaming the NAME cell in row {0:d} '.format(
-            field_ID) \
+            field_ID)
             + 'in tables: FIELD, SOURCE')
         table_list = ['FIELD', 'SOURCE']
     elif pointing:
         logger.info('Renaming the NAME cell in row {0:d} '.format(
-            field_ID) \
+            field_ID)
             + 'in tables: FIELD, POINTING')
         table_list = ['FIELD', 'POINTING']
     else:
         logger.info('Renaming the NAME cell in row {0:d} '.format(
-            field_ID) \
+            field_ID)
             + 'in table: FIELD')
         table_list = ['FIELD']
 
-    #Rename
+    # Rename
     for ftable_name in table_list:
         ftable_path = get_MS_subtable_path(MS, ftable_name, close=False)
 
@@ -477,12 +508,12 @@ def rename_single_field(mspath,
                 raise ValueError('Invalid field ID provided!')
 
             logger.debug('Original NAME in table {0:s}: {1:s}'.format(
-                        ftable_name, ftable.getcol('NAME')[field_ID]))
+                ftable_name, ftable.getcol('NAME')[field_ID]))
 
             ftable.putcell('NAME', field_ID, new_field_name)
 
             logger.debug('New NAME in table {0:s}: {1:s}'.format(
-                        ftable_name, ftable.getcol('NAME')[field_ID]))
+                ftable_name, ftable.getcol('NAME')[field_ID]))
 
         close_MS_table_object(ftable)
 
@@ -490,6 +521,6 @@ def rename_single_field(mspath,
         close_MS_table_object(MS)
 
 
-#=== MAIN ===
+# === MAIN ===
 if __name__ == "__main__":
     pass

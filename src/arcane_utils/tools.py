@@ -10,13 +10,14 @@ import numpy as np
 
 from scipy.constants import Boltzmann as kb
 
-#=== Set up logging
+# === Set up logging
 logger = logging.getLogger(__name__)
 
-#=== Functions ===
+# === Functions ===
+
 
 def estimate_RMS_level(Na, dnu, t_int, Np=2, Ts=50, D=13.5, eta=1.):
-    """Simple routine to estimate the *naturally* weighted RMS noise level for an 
+    """Simple routine to estimate the *naturally* weighted RMS noise level for an
     interferometer using uniform dishes. The code basically computes
     eq. 6.62 from TMS 3rd edition, but I acually use form of the equation as
     written in my doctoral thesis.
@@ -45,7 +46,7 @@ def estimate_RMS_level(Na, dnu, t_int, Np=2, Ts=50, D=13.5, eta=1.):
         The dish diameter in units of m
 
     eta: float
-        Efficiency parameter in between ]0:1]. 
+        Efficiency parameter in between ]0:1].
 
     Returns
     -------
@@ -54,16 +55,17 @@ def estimate_RMS_level(Na, dnu, t_int, Np=2, Ts=50, D=13.5, eta=1.):
         as this is the point-source sensitivity)
 
     """
-    Nb = (Na * (Na - 1)) / 2. #Number of baselines
+    Nb = (Na * (Na - 1)) / 2.  # Number of baselines
 
-    A = np.pi * np.power(D,2) / 4. #Dish collecting area
+    A = np.pi * np.power(D, 2) / 4.  # Dish collecting area
 
     S_RMS = (2 * kb * Ts) / (A * eta * np.sqrt(2 * Nb * Np * dnu * t_int))
 
-    S_RMS *= 1e+26 #Convert to Jansky
+    S_RMS *= 1e+26  # Convert to Jansky
 
     return S_RMS
 
-#=== MAIN ===
+
+# === MAIN ===
 if __name__ == "__main__":
     pass
