@@ -16,13 +16,36 @@ logger = logging.getLogger(__name__)
 #=== Functions ===
 
 def estimate_RMS_level(Na, dnu, t_int, Np=2, Ts=50, D=13.5, eta=1.):
-    """Simple routine to estimate the naturally weighted RMS noise level for an 
-    interferometer. The code basically computes eq. 6.62 from TMS 3rd edition, but
-    I acually use form of the equation from my doctoral thesis.
+    """Simple routine to estimate the *naturally* weighted RMS noise level for an 
+    interferometer using uniform dishes. The code basically computes
+    eq. 6.62 from TMS 3rd edition, but I acually use form of the equation as
+    written in my doctoral thesis.
+
+    TO DO: add the w-terms (weight factors) to beable to account for non-natural
+            weighting
 
     Parameters
     ----------
+    Na: int
+        Number of antennas in the array
 
+    dnu: float
+        Observing bandwidth in units of Hz
+
+    t_int: float
+        Integrated on-source observation time in units of s
+
+    Np: int
+        Number of polarisations used in data acquisition
+
+    Ts: float
+        System temperature in units of K
+
+    D: float
+        The dish diameter in units of m
+
+    eta: float
+        Efficiency parameter in between ]0:1]. 
 
     Returns
     -------
