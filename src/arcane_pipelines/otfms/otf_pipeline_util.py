@@ -168,12 +168,44 @@ def get_otfms_data_selection_from_config(config_path):
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(config_path)
 
-    # Mandatory
-    calibrator_list = [pipeline.remove_comment(s).strip(
-    ) for s in config.get('DATA', 'calibrator_list').split(',')]
-    target_field_list = [pipeline.remove_comment(s).strip(
-    ) for s in config.get('DATA', 'target_field_list').split(',')]
+    #=== Quick routine to get the argument values that are list of strings
+    #---------------------------------------------------------------------------
+    """Get a a parameter from the argparse parset file as a list of strings. This
+    routine can handle comments including commas. For example
 
+        `get_string_list(DATA, param_example)`
+
+    will return [a,b] from a parset looking like this:
+
+
+    [DATA]
+    param_example = a, b #c, d
+
+    NOTE: the code will shit the bed if the comment character is a comma. This,
+    however, is a super unexpected behaviour, so I am not gonna make a check or
+    exception for this case.
+
+    Parameters:
+    -----------
+    arg_val: str
+        The argument (variable) name in the parset file
+
+    section: str
+        The section in the parset file
+
+    Returns:
+    --------
+    A list of strings (avalue) of the argument (variable)
+
+    """
+    get_string_list = lambda section, arg_var: pipeline.remove_comment(
+        config.get(section, arg_var)).strip().split(',')
+    #---------------------------------------------------------------------------
+
+    # Mandatory
+    calibrator_list = get_string_list('DATA', 'calibrator_list')
+    target_field_list = get_string_list('DATA', 'target_field_list')
+    
     if len(calibrator_list) == 1 and calibrator_list[0] == '':
         raise ValueError('Missing mandatory parameter: calibrator_list')
     if len(target_field_list) == 1 and target_field_list[0] == '':
