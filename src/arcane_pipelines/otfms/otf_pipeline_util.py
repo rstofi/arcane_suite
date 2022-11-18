@@ -168,8 +168,8 @@ def get_otfms_data_selection_from_config(config_path):
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(config_path)
 
-    #=== Quick routine to get the argument values that are list of strings
-    #---------------------------------------------------------------------------
+    # === Quick routine to get the argument values that are list of strings
+    # ---------------------------------------------------------------------------
     """Get a a parameter from the argparse parset file as a list of strings. This
     routine can handle comments including commas. For example
 
@@ -198,14 +198,14 @@ def get_otfms_data_selection_from_config(config_path):
     A list of strings (avalue) of the argument (variable)
 
     """
-    get_string_list = lambda section, arg_var: pipeline.remove_comment(
+    def get_string_list(section, arg_var): return pipeline.remove_comment(
         config.get(section, arg_var)).strip().split(',')
-    #---------------------------------------------------------------------------
+    # ---------------------------------------------------------------------------
 
     # Mandatory
     calibrator_list = get_string_list('DATA', 'calibrator_list')
     target_field_list = get_string_list('DATA', 'target_field_list')
-    
+
     if len(calibrator_list) == 1 and calibrator_list[0] == '':
         raise ValueError('Missing mandatory parameter: calibrator_list')
     if len(target_field_list) == 1 and target_field_list[0] == '':
@@ -526,7 +526,7 @@ def generate_OTF_names_from_ra_dec(ra, dec, acronym='OTFasp'):
 
     otf_pointing_coord = SkyCoord(ra * u.deg, dec * u.deg, frame='icrs')
 
-    print(otf_pointing_coord.to_string('hmsdms', precision=4))
+    #print(otf_pointing_coord.to_string('hmsdms', precision=4))
 
     name_string = '{0:s}J{1:s}{2:s}'.format(
         acronym,

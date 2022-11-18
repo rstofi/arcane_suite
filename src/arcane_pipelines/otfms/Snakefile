@@ -1,12 +1,12 @@
-"""Sankefile for the otfms pipeline. Each rule calls a custom command-line application
-with the name `otfms_rule_name_in_this_snakefile`
+"""Sankefile for the arcane_otfms pipeline. Each rule calls a custom command-line application
+with the name `arcane_otfms_rule_name_in_this_snakefile`
 
 Some rules are only a simple wrapper around casa tasks, but some are doing more
 than calling task from some library.
 
 For more info on the individual rules, see the correspondig python scripts!
 
-The otfms pipleine builds the following file structure:
+The arcane_otfms pipleine builds the following file structure:
 
     working_dir/
     |
@@ -40,7 +40,7 @@ NOTE: this pipeline requires double (!) the input MS size
 
 To visualise the pipeline logic run the following command under the working directory:
 
-    snakemake --rulegraph | dot -Tpdf > otfms_rule_graph.pdf
+    snakemake --rulegraph | dot -Tpdf > arcane_otfms_rule_graph.pdf
 
 """
 import os
@@ -103,7 +103,7 @@ rule list_new_otf_field_names:
         yaml_path = YAML_path,
         output_fname = '{0:s}/otf_field_names.dat'.format(WORKING_dir)
     shell:
-        'otfms_otf_pointing_correction -c {params.yaml_path} -sn -o {params.output_fname} ' +\
+        'arcane_otfms_otf_pointing_correction -c {params.yaml_path} -sn -o {params.output_fname} ' +\
         '> {params.log_dir}/list_new_otf_field_names.log'
 
 #Split a single OTF pointing from the MS
@@ -123,11 +123,11 @@ rule split_otf_scans_by_pointing:
         yaml_path = YAML_path,
         casa_executable = os.path.join(OTF_OUTPUT_dir, 'split_otf_pointing_no_{field_ID}.py')
     shell:
-        'otfms_split -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        'arcane_otfms_split -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log ; ' +\
         'casa --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log 2>&1 ; ' +\
-        'otfms_split -p -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        'arcane_otfms_split -p -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log '
 
 #Rename the pointing field so later imaging processes can access it as a separate field
@@ -148,7 +148,7 @@ rule rename_otf_pointing:
         log_dir = LOG_dir,
         yaml_path = YAML_path
     shell:
-        'otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        'arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_renaming.log'
 
 #Apply the phase rotation on the single pointing
@@ -167,7 +167,7 @@ rule apply_phase_rotation:
         '/otf_pointing_no_{field_ID}_chgcentre.log'
     shell:
         'chgcentre {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
-        '$(otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
+        '$(arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '-ds -l {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log) ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log 2>&1'
         #'touch {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log'
@@ -191,11 +191,11 @@ rule merge_scan_and_target:
         output_MS = os.path.join(OUTPUT_dir,'final.ms'),
         casa_executable = os.path.join(OUTPUT_dir, 'merge_otf_pointings.py')
     shell:
-        'otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\
+        'arcane_otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\
         '> {params.log_dir}/merge_scans.log ; ' +\
         'casa --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
         '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
-        'otfms_merge -p -c {params.yaml_path} -o {params.output_MS} ' +\
+        'arcane_otfms_merge -p -c {params.yaml_path} -o {params.output_MS} ' +\
         '>> {params.log_dir}/merge_scans.log '
 
 #TO DO: add this rule at the end of the pipeline

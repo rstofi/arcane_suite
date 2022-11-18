@@ -13,6 +13,7 @@ import sys
 import logging
 import time
 import numpy as np
+from numba import jit
 
 from astropy.time import Time
 
@@ -287,6 +288,13 @@ def time_arrays_injective_intersection(
     value to more than one element in the other array, the code shits the bed and
     throws an error.
 
+    NOTE: I've tried to wrap this function with `numba` to @njit, but it thrown
+    an error. (+ del() is not compatible with numba). I made some measurements
+    with wrappring this function to @jit(forceobj=True), which runs numba in
+    object mode. This does not resulted in a speedup....
+
+    TO DO: refactor the code and speed up critical parts
+
     Parameters
     ----------
     t1_array: numpy array of float
@@ -328,7 +336,7 @@ def time_arrays_injective_intersection(
 
     # TO DO: raise warning if the arrays are to large e.g. >10e+5 or something
 
-    # This only needed if we try to be lever...
+    # This only needed if we try to be clever...
     """
     #Sort if not sorted
     #For already sorted arrays numpy is super fast allegedly...
@@ -342,13 +350,13 @@ def time_arrays_injective_intersection(
         t2_array = np.sort(t2_array)
     """
 
-    # We are not trying to be lever and will brute-forec the problem as it can handle
-    # ALL possibilities
+    # We are not trying to be clever and will brute-forec the problem as it can
+    # handle ALL possibilities
     common_times = []
 
-    # Loop through the rows of an imaginary boolean matrix with (N_t1, N_t2) size,
+    # Loop through the rows of a boolean matrix with (N_t1, N_t2) size,
     # where each (i,j) element is True, if t1[i] - t2[j] < threshold and False
-    # otherwise
+    # otherwise... maybe not memory efficient ?
 
     # In case the arrays have repeated values
     t1_array = np.unique(t1_array)
@@ -364,7 +372,7 @@ def time_arrays_injective_intersection(
         elif match_sum == 1:
             common_times.append(t1_array[i])
 
-    del i, match_sum
+    del i, match_sum  # del() doesn't work with numba....
 
     # Check if multiple t1 values returned as there is multiple match with a
     # single t2 value
