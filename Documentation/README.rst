@@ -1,7 +1,7 @@
 Arbitrary Radio astronomiCAl pipeliNE suite (arcane_suite)
 ==========================================================
 
-`arcane_suite` is a collection of *arbitrary* analitycs and utility command-line tools & libararies and pre-defined pieplines built in `Snakemake <https://snakemake.github.io/>`_.
+``arcane_suite`` is a collection of *arbitrary* analitycs and utility command-line tools & libararies and pre-defined pieplines built in `Snakemake <https://snakemake.github.io/>`_.
 
 Pipelines
 ---------
