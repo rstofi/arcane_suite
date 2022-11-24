@@ -1,16 +1,25 @@
 Arbitrary Radio astronomiCAl pipeliNE suite (arcane_suite)
 ==========================================================
 
-``arcane_suite`` is a collection of *arbitrary* analitycs and utility command-line tools & libararies and pre-defined pieplines built in `Snakemake <https://snakemake.github.io/>`_.
+``arcane_suite`` is a collection of *arbitrary* analytic and utility command-line tools & libraries and pre-defined pipelines built in ``Snakemake``. For a quick overview of the library's structure, and a brief description of the architecture and development ideas, see the `design & philosophy <https://github.com/rstofi/arcane_suite/blob/main/Documentation/Design_and_Philosophy.rst>`_ page.
+
+The main ``arcane_suite`` components are:
+
+* `Pipelines`_
+* `Tools`_
+* `Modules`_
 
 Pipelines
 ---------
 
-Each pipeline included in `arcane_suite` is designed to perform a well-defined simple task, and so *only* allowing for *limited* parametrization. Nonetheless, each pipeline comes with its own script that can initialise the building of the pipeline based on a configuration file. So building and running these pipelines should be done with minimal effort.
+
+
+..
+    Each pipeline included in ``arcane_suite`` is designed to perform a well-defined simple task, and so *only* allowing for *limited* parameterization. Nonetheless, each pipeline comes with its own script that can initialize the building of the pipeline based on a configuration file. So building and running these pipelines should be done with minimal effort.
 
 TO DO: add a short description to where the pipeline-specific code is stored
 
-TO DO: add a list starting with the otfms pipeline and initialise its documantation
+TO DO: add a list starting with the otfms pipeline and initialize its documentation
 
 Tools
 -----
@@ -18,8 +27,8 @@ Tools
 TO DO: describe the planned tools
 
 
-Utility libraries
------------------
+Modules
+-------
 
 TO DO: describe the utility libraries used
 
