@@ -1,11 +1,16 @@
 """Collection of utility functions general to initializing and handling pipelines
 """
 
-__all__ = ['argflatten', 'get_common_env_variables', 'remove_comment',
-           'init_logger', 'init_empty_config_file_with_common_ENV_variables',
-           'is_command_line_tool', 'get_aliases_for_command_line_tools',
-           'add_aliases_to_config_file', 'add_unique_defaults_to_config_file']
-
+__all__ = [
+    'argflatten',
+    'get_common_env_variables',
+    'remove_comment',
+    'init_logger',
+    'init_empty_config_file_with_common_ENV_variables',
+    'is_command_line_tool',
+    'get_aliases_for_command_line_tools',
+    'add_aliases_to_config_file',
+    'add_unique_defaults_to_config_file']
 
 import sys
 import os
