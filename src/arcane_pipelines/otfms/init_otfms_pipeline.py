@@ -16,7 +16,8 @@ from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
 from arcane_utils import time as a_time
 
-from arcane_pipelines.otfms import otf_pipeline_util as putil
+from arcane_pipelines.otfms import otfms_pipeline_util as putil
+from arcane_pipelines.otfms import otfms_defaults
 
 # === Set logging
 logger = pipeline.init_logger(color=True)
@@ -74,7 +75,13 @@ def main():
         Bool, if provided the working directory is overwritten completely
 
     optional -ol or --overwrite-lock
-        Bool, If enabled, the working directory is locked and only created if not existing
+        Bool, if enabled, the working directory is locked and only created if not existing
+
+    optional -cd or --skip_dependencies_check:
+        Bool, if enabled, the code skip the checks for the dependent packages (casa, chagcentre)
+
+    optional -cs or skip_snakemake_check:
+        Bool, if enabled, the code skip checking for Snakemake and not performing the dry run
 
     """
     # === Set arguments
@@ -95,7 +102,7 @@ def main():
         '-t',
         '--template',
         required=False,
-        help='If enabled a config file template is creted with the name specified by the --config_file argument',
+        help='If enabled a config file template is created with the name specified by the --config_file argument',
         action='store_true')
 
     parser.add_argument(
@@ -112,24 +119,38 @@ def main():
         help='If enabled, the working directory is locked and only created if not existing',
         action='store_true')
 
+    parser.add_argument(
+        '-sdc',
+        '--skip_dependencies_check',
+        required=False,
+        help='If enabled, the code skip the checks for the dependent packages (casa, chagcentre)',
+        action='store_false')
+
+    parser.add_argument(
+        '-ssc',
+        '--skip_snakemake_check',
+        required=False,
+        help='If enabled, the code skip checking for Snakemake and not performing the dry run',
+        action='store_false')
+
     # ===========================================================================
     args = parser.parse_args()  # Get the arguments
 
     if args.template:
         logger.info(
-            'Creating template config file for *otfms* pipeline from arcane-suite')
+            'Creating template config file for *otfms* pipeline from arcane_suite')
 
         if not args.overwrite_lock:
-            putil.init_empty_config_for_otfms(template_path=args.config_file)
+            putil.init_config_for_otfms(template_path=args.config_file)
         else:
-            putil.init_empty_config_for_otfms(template_path=args.config_file,
-                                              overwrite=False)
+            putil.init_config_for_otfms(template_path=args.config_file,
+                                        overwrite=False)
 
         # TNow halt the program
         sys.exit(0)
 
     else:
-        logger.info('Building *otfms* pipeline from arcane-suite')
+        logger.info('Building *otfms* pipeline from arcane_suite')
 
     # Check if the config file exists
     if not os.path.exists(args.config_file):
@@ -138,34 +159,53 @@ def main():
     # === Read the environment vales from the config file
     logger.info('Solving for environment...')
 
-    # Checking for required software
-    snakemake_alias = 'snakemake'
-    if pipeline.is_command_line_tool(snakemake_alias) == False:
-        raise ValueError(
-            "The command '{0:s}' not callable! Please install {0:s}!".format(snakemake_alias))
-
-    del snakemake_alias
-
-    chgcantre_alias = 'chgcentre'
-    if pipeline.is_command_line_tool(chgcantre_alias) == False:
-        logger.critical(
-            "The command '{0:s}' not callable! Please install {0:s}!".format(chgcantre_alias))
-
-    del chgcantre_alias
-
     # Get the ENV variables from config
-    working_dir, casa_alias = pipeline.get_common_env_variables(
+    working_dir = pipeline.get_common_env_variables(
         args.config_file)
 
-    # Check for casa installation
-    if pipeline.is_command_line_tool(
-        casa_alias,
-        t_args=[
-            '--log2term',
-            '--nogui',
-            '--nologfile']) == False:
+    # Get aliases
+    command_line_tool_alias_dict = pipeline.get_aliases_for_command_line_tools(
+        config_path=args.config_file,
+        aliases_list=otfms_defaults._otfms_default_aliases,
+        defaults_list=otfms_defaults._otfms_default_alias_values)
+
+    # Raise warning if Snakemake is not called as `snakemake`
+    if command_line_tool_alias_dict['snakemake_alias'] != 'snakemake':
         logger.critical(
-            "No CASA installation found that can be called via the '{0:s}' command!".format(casa_alias))
+            'Snakemake is not callable via the snaklemake command in this system, based on the config file alias!')
+
+    if args.skip_snakemake_check:
+        # Checking for required software
+        if pipeline.is_command_line_tool(
+                command_line_tool_alias_dict['snakemake_alias']) == False:
+            raise ValueError(
+                "The command '{0:s}' not callable! Please install {0:s}!".format(
+                    command_line_tool_alias_dict['snakemake_alias']))
+
+    else:
+        logger.warning('Skip checking Snakemake installation')
+
+    if args.skip_dependencies_check:
+        if pipeline.is_command_line_tool(
+                command_line_tool_alias_dict['chgcentre_alias']) == False:
+            logger.critical(
+                "The command '{0:s}' not callable! Please install {0:s}!".format(
+                    command_line_tool_alias_dict['chgcentre_alias']))
+
+        # Check for casa installation
+        if pipeline.is_command_line_tool(
+            command_line_tool_alias_dict['casa_alias'],
+            t_args=[
+                '--log2term',
+                '--nogui',
+                '--nologfile']) == False:
+            logger.critical(
+                "No CASA installation found that can be called via the '{0:s}' command!".format(
+                    command_line_tool_alias_dict['casa_alias']))
+
+    else:
+        logger.warning('Skip checking for chgcentre installation')
+        logger.warning('Skip checking for CASA installation')
 
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
@@ -294,7 +334,7 @@ def main():
     ms_wrapper.close_MS_table_object(MS)
 
     # This case is only if the selected timerange is smaller than the
-    # viaibility sampling interval
+    # visibility sampling interval
     if np.size(selected_times) == 0:
         raise ValueError(
             'No OTF pointing matches the data selection criteria!')
@@ -327,7 +367,7 @@ def main():
     if np.size(cross_matched_reference_times) == 0:
         raise ValueError('No valid OTF pointing selection can be made!')
 
-    logger.info('{0:d} OTF pointings selected'.format(
+    logger.info('{0:d} OTF pointings selected...'.format(
         np.size(cross_matched_reference_times)))
 
     ms_wrapper.close_MS_table_object(MS)
@@ -341,13 +381,16 @@ def main():
     # Create config.yaml
     snakemake_config = os.path.join(working_dir, 'config.yaml')
 
+    # NOTE: the creation of the .yml file needs to be defined separately from the
+    # pipeline config file as not all the same variables are used!
+
     # Remove if exist
     with open(snakemake_config, 'w') as sconfig:
 
         # NOTE: I only using spaces and not tabs as in YAML they should not be mixed!
         # I also not using the yaml module...
 
-        sconfig.write('# Config file generated by arcane-suit at {0:s}\n'.format(
+        sconfig.write('# Config file generated by arcane_suite at {0:s}\n'.format(
             str(datetime.datetime.now())))
 
         sconfig.write('working_dir:\n  {0:s}\n'.format(
@@ -372,7 +415,7 @@ def main():
         sconfig.write('split_timedelta:\n  {0:.8f}\n'.format(
             split_timedelta))
         sconfig.write("casa_alias:\n  '{0:s}'\n".format(
-            casa_alias))
+            command_line_tool_alias_dict['casa_alias']))
 
         # List of calibrators and target fields
         sconfig.write('calibrator_fields:\n')
@@ -391,24 +434,28 @@ def main():
                     i, cross_matched_reference_times[i]))
 
     # === Test if build was succesfull ===
-    logger.info('Testing pipeline setup via dry run...')
+    if args.skip_snakemake_check:
+        logger.info('Testing pipeline setup via dry run...')
 
-    # Snakemake dry run (also creates a .snakemake hidden directory under the
-    # working_dir)
-    snakemake_proc = subprocess.run(
-        'cd {0:s};  snakemake -np'.format(working_dir),
-        shell=True,
-        capture_output=True)
-    # Capture output
-    out, err = snakemake_proc.stdout, snakemake_proc.stderr
-    exitcode = snakemake_proc.returncode
+        # Snakemake dry run (also creates a .snakemake hidden directory under the
+        # working_dir)
+        snakemake_proc = subprocess.run(
+            'cd {0:s};  {1:s} -np'.format(working_dir, command_line_tool_alias_dict['snakemake_alias']),
+            shell=True,
+            capture_output=True)
+        # Capture output
+        out, err = snakemake_proc.stdout, snakemake_proc.stderr
+        exitcode = snakemake_proc.returncode
 
-    if exitcode != 0:
-        # Snakemake puts everythin in out, and nothing to err
-        logger.error(out)
-        # logger.debug(err)
-        raise ValueError(
-            'Unexpected error occured in pipeline setup (see the Snakemake output above)!')
+        if exitcode != 0:
+            # Snakemake puts everythin in out, and nothing to err
+            logger.error(out)
+            # logger.debug(err)
+            raise ValueError(
+                'Unexpected error occurred in pipeline setup (see the Snakemake output above)!')
+
+    else:
+        logger.warning('Skipping dry run')  # Maybe this should be CRITICAL (?)
 
     # === Exit
     logger.info('Pipeline created')

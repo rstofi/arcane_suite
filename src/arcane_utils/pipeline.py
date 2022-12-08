@@ -2,8 +2,9 @@
 """
 
 __all__ = ['argflatten', 'get_common_env_variables', 'remove_comment',
-           'init_logger', 'init_empty_config_file_with_common_variables',
-           'is_command_line_tool']
+           'init_logger', 'init_empty_config_file_with_common_ENV_variables',
+           'is_command_line_tool', 'get_aliases_for_command_line_tools',
+           'add_aliases_to_config_file', 'add_unique_defaults_to_config_file']
 
 
 import sys
@@ -56,7 +57,7 @@ class CustomColorFormatter(logging.Formatter):
 
 def init_logger(log_level='INFO', color=False,
                 log_file=None, null_logger=False):
-    """Initialise the logger and formatting. This is a convinience function
+    """Initialize the logger and formatting. This is a convenience function
 
     Parameters
     ----------
@@ -64,7 +65,7 @@ def init_logger(log_level='INFO', color=False,
         The level of the logger
 
     color: bool, optional
-        If True the logger will be coloured by levels
+        If True the logger will be colored by levels
 
     log_file: str, optional
         If given the log will go to this file rather than to stdout
@@ -238,38 +239,84 @@ def get_common_env_variables(config_path):
         if working_dir == '':
             raise ValueError('Missing mandatory parameter: working_dir')
     except BaseException:
-        raise ValueError('Mandatory parameter working_dir has to be specifyed')
+        raise ValueError('Mandatory parameter working_dir has to be specified')
 
-    # Optional field in case the casa installation can be called by anything thanű
-    # the casa command, e.g. casa6
-    try:
-        casa_alias = config.get('ENV', 'casa_alias')
-        casa_alias = remove_comment(casa_alias).strip()
-
-        if casa_alias == '':
-            casa_alias = 'casa'
-    except BaseException:
-        casa_alias = 'casa'
-
-    return working_dir, casa_alias
+    return working_dir
 
 
-def init_empty_config_file_with_common_variables(template_path,
-                                                 pipeline_name,
-                                                 overwrite=True):
-    """Initialise config file that can be used as a basis for other code to expand
+def get_aliases_for_command_line_tools(
+        config_path, aliases_list, defaults_list):
+    """This subroutine can be used to get a list of aliases from the ENV variables.
+
+    The aliases have to be provided as a list of int, an the output is a dictionary
+    with the keys as aliases, with the aliases defined in the config, being the
+    values. If no values are provided, the alias name is subtracted from the `defaults_list`
+    array.
+
+    NOTE: each pipeline, should have their defaults_list defined in the `_pipeline_util.py` code
+
+    Parameters
+    ----------
+    config_path: str
+        Path to the config file initializing the pipeline
+
+    aliases: list of str
+        A list of the alias names that could be defined in the config file, e.g.
+        `casa_alias`
+
+    defaults_list: list of str
+        A list of the default values for the command line tools that can be aliased,
+        e.g. 'casa6'
+
+    Returns
+    -------
+    command_line_tool_alias_dict: dict
+        A dictionary with each alias paired with the alias defined in the config,
+        or with the value from the `defaults_list`, if the alias is not defined
+        in the config
+
+    """
+    if len(aliases_list) != len(defaults_list):
+        raise ValueError(
+            'The input aliases and defaults lists have different shape!')
+
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read(config_path)
+
+    command_line_tool_alias_dict = {}
+
+    for i in range(0, len(aliases_list)):
+        try:
+            command_line_tool_alias = config.get('ENV', aliases_list[i])
+            command_line_tool_alias = remove_comment(
+                command_line_tool_alias).strip()
+
+            if command_line_tool_alias == '':
+                command_line_tool_alias = defaults_list[i]
+        except BaseException:
+            command_line_tool_alias = defaults_list[i]
+
+        command_line_tool_alias_dict[aliases_list[i]] = command_line_tool_alias
+
+    return command_line_tool_alias_dict
+
+
+def init_empty_config_file_with_common_ENV_variables(template_path,
+                                                     pipeline_name,
+                                                     overwrite=True):
+    """Initialize config file that can be used as a basis for other code to expand
     into an empty template config file.
 
     Parameters
     ----------
     template_path: str
-        Path and name of the template created
+        Path and name of the template config created
 
     pipeline_name: str
         The name of the pipeline. Is written in the header line as an info
 
     overwrite: bool, opt
-        If True the input file is overwritten, othervise an error is thrown
+        If True the input file is overwritten, otherwise an error is thrown
 
     Returns
     -------
@@ -278,25 +325,180 @@ def init_empty_config_file_with_common_variables(template_path,
     """
     if os.path.exists(template_path):
         if overwrite:
-            logger.debug('Overwriting existin config file: {0:s}'.format(
+            logger.debug('Overwriting existing config file: {0:s}'.format(
                 template_path))
         else:
-            raise FileExistsError('Config templete already exists!')
+            raise FileExistsError('Config template already exists!')
 
     with open(template_path, 'w') as aconfig:
-        aconfig.write('# Template {0:s} pieline config file generated by \
-arcane-suit at {1:s}\n'.format(pipeline_name, str(datetime.datetime.now())))
+        aconfig.write('# Template {0:s} pipeline config file generated by \
+arcane_suit at {1:s}\n'.format(pipeline_name, str(datetime.datetime.now())))
 
         aconfig.write('\n[ENV]\n')
 
         aconfig.write(f"{'working_dir':<30}" +
-                      f"{'= ':<5}" + '#Mandatory, path\n')
-        aconfig.write(f"{'casa_alias':<30}" +
-                      f"{'= ':<5}" + '#Optional, str\n')
+                      f"{'= ':<5}" + '#Mandatory, absolute path\n')
+
+
+def add_aliases_to_config_file(
+        template_path,
+        aliases_list,
+        defaults_list=None):
+    """The pipelines defined in `arcane_suite` have the defaults stored in a
+    `pipeline_name_defaults.py` file. The command-line tools can be aliased, so
+    I have set up two lists in this file:
+
+    `_pipeline_name_default_aliases` & `_pipeline_name_default_alias_values`
+
+    This script should get these arrays and append a template config file with the
+    alias names and empty strings (+ comments) or can write the default values if
+    the `default_list is given`
+
+    NOTE: in any pipeline the aliases should be optional values!
+
+    TO DO: make sure that the aliases are appended to the [ENV] section
+
+    NOTE: the best usage of this function is to call it after
+        `init_empty_config_file_with_common_ENV_variables`, so the aliases are
+        appended into the ENV section
+
+    Parameters
+    ----------
+    template_path: str
+        Path and name of the template config created
+
+    aliases: list of str
+        A list of the alias names that could be defined in the config file, e.g.
+        `casa_alias`
+
+    defaults_list: list of str
+        A list of the default values for the command line tools that can be aliased,
+        e.g. 'casa6'
+
+    Returns
+    -------
+    Appends the aliases to the template config file
+
+    """
+
+    # The template should exist, and if not we throw an error
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(
+            'Config template does not exists, please create it first!')
+
+    with open(template_path, 'a') as aconfig:
+
+        if defaults_list is None:
+            for i in aliases_list:
+                aconfig.write(
+                    f"{'{0:s}'.format(i):<30}" +
+                    f"{'= ':<5}" +
+                    '#Optional, string\n')
+
+        else:
+            if len(aliases_list) != len(defaults_list):
+                raise ValueError(
+                    'The input aliases and defaults lists have different shape!')
+            else:
+                for i, j in zip(aliases_list, defaults_list):
+                    aconfig.write(
+                        f"{'{0:s}'.format(i):<30}" +
+                        f"{'= ':<5}" +
+                        '{0:s} '.format(j) +
+                        '#Optional, string\n')
+
+
+def add_unique_defaults_to_config_file(template_path, unique_defaults_dict):
+    """The pipelines defined in `arcane_suite` have the defaults stored in a
+    `pipeline_name_defaults.py` file.
+
+    The unique sections and variables should be stored in this file in the following
+    format of a nested dict:
+
+    ```
+    unique_defaults_dict = {'UNIQUE_SECTION_1':{'unique_var_1:unique_var_values_1',
+                                                'unique_var_N:unique_var_values_N'},
+                         'UNIQUE_SECTION_N':{'unique_var_1:unique_var_values_1',
+                                            'unique_var_N:unique_var_values_N'}}
+
+    ```
+
+    Where the `unique_var_values` should be lists with length of 3, with the
+    following values and types:
+
+    ```
+    [default value, mandatory (True = yes), description of the type]
+    [str, bool, str]
+
+    ```
+
+    This code, gets a dictionary of the format described above and appends it
+    in the proper format at the end of a template config file.
+
+    NOTE: the EVN section of the dict is ignored!
+
+    TO DO: add an option to use only the unique variables that should go to the ENV section
+
+    NOTE: the best usage of this function is to call it after
+        `init_empty_config_file_with_common_ENV_variables`, or after the
+        `add_aliases_to_config_file` function, so the aliases are
+        appended into the ENV section
+
+    Parameters
+    ----------
+    template_path: str
+        Path and name of the template config created
+
+    unique_defaults_dict: dict
+        The dictionary defined above
+
+    Returns
+    -------
+    Appends the unique sections and variables to the template config file
+
+    """
+
+    # The template should exist, and if not we throw an error
+    if not os.path.exists(template_path):
+        raise FileNotFoundError(
+            'Config template does not exists, please create it first!')
+
+    with open(template_path, 'a') as aconfig:
+        for unique_sections in unique_defaults_dict:
+            if unique_sections != 'ENV':
+                aconfig.write('\n[{0:s}]\n'.format(unique_sections))
+
+                for unique_params in unique_defaults_dict[unique_sections]:
+
+                    if unique_defaults_dict[unique_sections][unique_params][1]:
+                        aconfig.write(
+                            f"{'{0:s}'.format(unique_params):<30}" +
+                            f"{'= ':<5}" +
+                            '#Mandatory, {0:s}\n'.format(
+                                unique_defaults_dict[unique_sections][unique_params][2]))
+                    else:
+                        aconfig.write(
+                            f"{'{0:s}'.format(unique_params):<30}" +
+                            f"{'= ':<5}" +
+                            '#Optional, {0:s}\n'.format(
+                                unique_defaults_dict[unique_sections][unique_params][2]))
 
 
 def get_var_from_yaml(yaml_path, var_name):
-    """
+    """Simple routine to read variables from a .yml file
+
+    Parameters
+    ----------
+    yaml_path: str
+        Absolute path to the .yaml file
+
+    var_name:
+        The name of the variable which value we want to read from the file
+
+    Returns
+    -------
+    The selected value
+
     """
 
     with open(yaml_path) as file:

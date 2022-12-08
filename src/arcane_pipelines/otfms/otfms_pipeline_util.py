@@ -4,7 +4,7 @@
 __all__ = [
     'get_otfms_data_variables',
     'get_otfms_data_selection_from_config',
-    'init_empty_config_for_otfms',
+    'init_config_for_otfms',
     'get_times_from_reference_pointing_file',
     'get_pointing_from_reference_pointing_file',
     'get_pointing_and_times_from_reference_pointing_file']
@@ -22,19 +22,22 @@ from arcane_utils import time as a_time
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
+from arcane_pipelines.otfms import otfms_defaults
+
 # === Set up logging
 logger = logging.getLogger(__name__)
 
-
 # === Functions ===
-def init_empty_config_for_otfms(template_path, overwrite=True):
+
+
+def init_config_for_otfms(
+        template_path,
+        overwrite=True,
+        create_template=False):
     """Generate an empty config file for the *otfms* pipeline. The resultant file
     can be filled by hand, to actually create an usable pipeline.
 
-    NOTE that all the possible control parameters *uniqe* to the otfms pipeline
-    should be in this function.
-
-    TO DO: if too many control options are implemented re-structure the code
+    NOTE: this is a wrapper around the default values defined in `otfms_defaults.py`
 
     Parameters
     ----------
@@ -51,32 +54,16 @@ def init_empty_config_for_otfms(template_path, overwrite=True):
     """
 
     # Generate a basic template with the common variables used in all pipelines
-    pipeline.init_empty_config_file_with_common_variables(
+    pipeline.init_empty_config_file_with_common_ENV_variables(
         template_path=template_path, pipeline_name='otfms', overwrite=overwrite)
 
-    # Given that the config template is generated append wuth the relevant
-    # sections
-    with open(template_path, 'a') as aconfig:
+    pipeline.add_aliases_to_config_file(
+        template_path=template_path,
+        aliases_list=otfms_defaults._otfms_default_aliases)
 
-        aconfig.write('\n[DATA]\n')
-
-        aconfig.write(f"{'MS':<30}" + f"{'= ':<5}" + '#Mandatory, path\n')
-        aconfig.write(f"{'pointing_ref':<30}" +
-                      f"{'= ':<5}" + '#Mandatory, path\n')
-        aconfig.write(f"{'calibrator_list':<30}" + f"{'= ':<5}" +
-                      '#Mandatory, comma separated list\n')
-        aconfig.write(f"{'target_field_list':<30}" + f"{'= ':<5}" +
-                      '#Mandatory, comma separated list\n')
-        aconfig.write(f"{'scans':<30}" + f"{'= ':<5}" +
-                      '#Optional, comma separated list of scan IDs\n')
-        aconfig.write(f"{'timerange':<30}" + f"{'= ':<5}" + '#Optional, \
- formatted as yyyy/mm/dd/hh:mm:ss.ss~yyyy/mm/dd/hh:mm:ss.ss\n')
-        aconfig.write(f"{'ant1_ID':<30}" + f"{'= ':<5}" + '#Optional, int\n')
-        aconfig.write(f"{'ant2_ID':<30}" + f"{'= ':<5}" + '#Optional, int\n')
-        aconfig.write(f"{'time_crossmatch_threshold':<30}" + f"{'= ':<5}" +
-                      '#Optional, float\n')
-        aconfig.write(f"{'split_timedelta':<30}" + f"{'= ':<5}" +
-                      '#Optional, float\n')
+    pipeline.add_unique_defaults_to_config_file(
+        template_path=template_path,
+        unique_defaults_dict=otfms_defaults._otfms_default_config_dict)
 
 
 def get_otfms_data_variables(config_path):
