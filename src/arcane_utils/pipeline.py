@@ -10,7 +10,9 @@ __all__ = [
     'is_command_line_tool',
     'get_aliases_for_command_line_tools',
     'add_aliases_to_config_file',
-    'add_unique_defaults_to_config_file']
+    'add_unique_defaults_to_config_file',
+    'check_snakemake_installation',
+    'check_is_installed']
 
 import sys
 import os
@@ -21,7 +23,9 @@ import yaml
 import errno
 import subprocess
 
-from arcane_utils.globals import _VALID_LOG_LEVELS
+from shutil import which
+
+from arcane_utils.globals import _VALID_LOG_LEVELS, _SNAKEMAKE_BASE_NAME
 
 # === Set up logging
 logger = logging.getLogger(__name__)
@@ -119,7 +123,7 @@ def init_logger(log_level='INFO', color=False,
 
 def is_command_line_tool(command_name, t_args=None):
     """Function to check if a string is a valid callable command-line tool.
-    Usedult to check id e.g. snakemake is isnatalled on a system...
+    Useful to check if e.g. snakemake is installed on a system...
 
     This is kinda a hacky code based on:
     https://stackoverflow.com/questions/11210104/check-if-a-program-exists-from-a-python-script
@@ -171,6 +175,103 @@ def is_command_line_tool(command_name, t_args=None):
             if e.errno == errno.ENOENT:
                 return False
     return True
+
+
+def check_snakemake_installation(snakemake_alias, pedantic=True):
+    """Simple routine that check if there is a CASA software installed by which,
+    then it also checks if there is a snakemake executable defined by the
+    `snakemake_alias` argument.
+
+    Parameters
+    ----------
+    snakemake_alias: str
+        The command-line alias to call snakemake (e.g. snakemakeX)
+
+    pedantic: bool, opt
+        If set to True, the function halts the program if no snakemake installation is found
+
+    Returns
+    -------
+    If snakemake is installed None, otherwise logs and potentially raises an error
+    """
+
+    snakemake_installation = which(_SNAKEMAKE_BASE_NAME)
+
+    # Raise warning if Snakemake is not called as `snakemake`
+    if snakemake_alias != _SNAKEMAKE_BASE_NAME:
+        logger.critical(
+            "Snakemake is not callable via the '{0:s}' command in this system, based on the config file alias!".format(
+                _SNAKEMAKE_BASE_NAME))
+
+    if snakemake_installation is not None:
+
+        logger.debug('Found snakemake installation at: {}'.format(
+            snakemake_installation))
+
+        if is_command_line_tool(snakemake_alias) == False:
+            raise ValueError(
+                "The command '{0:s}' is not callable, but find a Snakemake \
+installation under {1:s} . Please change snakemake_alias in the config file!".format(
+                    snakemake_alias, snakemake_installation))
+    else:
+        if pedantic:
+            raise ValueError(
+                'No Snakemake installation have been found on the system!')
+        else:
+            logger.critical(
+                'No Snakemake installation have been found on the system!')
+
+
+def check_is_installed(command_line_tool_alias, pedantic=False):
+    """This is the generalised version of the functions `check_snakemake_installation`,
+    and `check_casa_installation` . While Snakemake is essential to check and log
+    more aggressively, and the casa check is required to run with custom flags, I
+    made separate functions for them.
+
+    This code basically looks if a code is executable and if it can be called by the
+    `command_line_tool_alias` parameter from the command line.
+
+    Parameters
+    ----------
+    command_line_tool_alias: str
+        The command-line alias to call the tool to be checked
+
+    pedantic: bool, opt
+        If set to True, the function halts the program if no installation is found
+
+    Returns
+    -------
+    If the program is installed None, otherwise logs and potentially raises an error
+
+    """
+
+    is_program_installed = False
+
+    program_installations = which(command_line_tool_alias)
+
+    if program_installations is not None:
+        logger.debug(
+            "Found '{0:s}' installation at: {1:s}".format(
+                command_line_tool_alias,
+                program_installations))
+
+        is_program_installed = True
+
+    if is_command_line_tool(command_line_tool_alias) == False:
+        if is_program_installed:
+            logger.critical(
+                "No '{0:s}'' installation found that can be called \
+via the '{0:s}' command, but found a '{0:s}' installation under {1:s} . Please change \
+the alias in the config file!".format(
+                    command_line_tool_alias, program_installations))
+
+        else:
+            if pedantic:
+                raise ValueError("No '{0:s}' installation found!".format(
+                    command_line_tool_alias))
+            else:
+                logger.critical("No '{0:s}' installation found!".format(
+                    command_line_tool_alias))
 
 
 def argflatten(arg_list):

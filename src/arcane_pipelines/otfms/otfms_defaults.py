@@ -1,11 +1,19 @@
 """Default variables used by the `arcane_otfms` pipeline
 """
 
+from arcane_utils.globals import _SNAKEMAKE_BASE_NAME, _CASA_BASE_NAME
+
+
 # Define the default alias names and values for the command line tools
 # used by the pipeline
 
-_otfms_default_aliases = ['snakemake_alias', 'chgcentre_alias', 'casa_alias']
-_otfms_default_alias_values = ['snakemake', 'chgcentre', 'casa']
+_otfms_default_aliases = ['snakemake_alias',
+                          'casa_alias',
+                          'chgcentre_alias']
+
+_otfms_default_alias_values = [_SNAKEMAKE_BASE_NAME,
+                               _CASA_BASE_NAME,
+                               'chgcentre']
 
 
 # Define the default values of the config file

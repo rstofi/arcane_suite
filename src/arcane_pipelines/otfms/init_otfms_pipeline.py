@@ -15,6 +15,7 @@ import subprocess
 from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
 from arcane_utils import time as a_time
+from arcane_utils import casa_wrapper
 
 from arcane_pipelines.otfms import otfms_pipeline_util as putil
 from arcane_pipelines.otfms import otfms_defaults
@@ -124,14 +125,14 @@ def main():
         '--skip_dependencies_check',
         required=False,
         help='If enabled, the code skip the checks for the dependent packages (casa, chagcentre)',
-        action='store_false')
+        action='store_true')
 
     parser.add_argument(
         '-ssc',
         '--skip_snakemake_check',
         required=False,
         help='If enabled, the code skip checking for Snakemake and not performing the dry run',
-        action='store_false')
+        action='store_true')
 
     # ===========================================================================
     args = parser.parse_args()  # Get the arguments
@@ -169,39 +170,28 @@ def main():
         aliases_list=otfms_defaults._otfms_default_aliases,
         defaults_list=otfms_defaults._otfms_default_alias_values)
 
-    # Raise warning if Snakemake is not called as `snakemake`
-    if command_line_tool_alias_dict['snakemake_alias'] != 'snakemake':
-        logger.critical(
-            'Snakemake is not callable via the snaklemake command in this system, based on the config file alias!')
+    # Checking for required software
+    if not args.skip_snakemake_check:
 
-    if args.skip_snakemake_check:
-        # Checking for required software
-        if pipeline.is_command_line_tool(
-                command_line_tool_alias_dict['snakemake_alias']) == False:
-            raise ValueError(
-                "The command '{0:s}' not callable! Please install {0:s}!".format(
-                    command_line_tool_alias_dict['snakemake_alias']))
-
+        pipeline.check_snakemake_installation(
+            command_line_tool_alias_dict['snakemake_alias'], pedantic=True)
     else:
+
+        # Raise warning if Snakemake is not called as `snakemake`
+        if command_line_tool_alias_dict['snakemake_alias'] != 'snakemake':
+            logger.critical(
+                'Snakemake is not callable via the snaklemake command in this system, based on the config file alias!')
+
         logger.warning('Skip checking Snakemake installation')
 
-    if args.skip_dependencies_check:
-        if pipeline.is_command_line_tool(
-                command_line_tool_alias_dict['chgcentre_alias']) == False:
-            logger.critical(
-                "The command '{0:s}' not callable! Please install {0:s}!".format(
-                    command_line_tool_alias_dict['chgcentre_alias']))
+    if not args.skip_dependencies_check:
+        # Check for chgcentre
+        pipeline.check_is_installed(
+            command_line_tool_alias_dict['chgcentre_alias'])
 
         # Check for casa installation
-        if pipeline.is_command_line_tool(
-            command_line_tool_alias_dict['casa_alias'],
-            t_args=[
-                '--log2term',
-                '--nogui',
-                '--nologfile']) == False:
-            logger.critical(
-                "No CASA installation found that can be called via the '{0:s}' command!".format(
-                    command_line_tool_alias_dict['casa_alias']))
+        casa_wrapper.check_casa_installation(
+            command_line_tool_alias_dict['casa_alias'])
 
     else:
         logger.warning('Skip checking for chgcentre installation')
@@ -417,6 +407,9 @@ def main():
         sconfig.write("casa_alias:\n  '{0:s}'\n".format(
             command_line_tool_alias_dict['casa_alias']))
 
+        sconfig.write("chgcentre_alias:\n  '{0:s}'\n".format(
+            command_line_tool_alias_dict['chgcentre_alias']))
+
         # List of calibrators and target fields
         sconfig.write('calibrator_fields:\n')
         for i in range(0, np.size(calibrator_list)):
@@ -434,7 +427,7 @@ def main():
                     i, cross_matched_reference_times[i]))
 
     # === Test if build was succesfull ===
-    if args.skip_snakemake_check:
+    if not args.skip_snakemake_check:
         logger.info('Testing pipeline setup via dry run...')
 
         # Snakemake dry run (also creates a .snakemake hidden directory under the

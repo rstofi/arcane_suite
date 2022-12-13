@@ -60,6 +60,10 @@ OUTPUT_dir = config['output_dir']
 OTF_OUTPUT_dir = config['output_otf_dir']
 YAML_path = os.path.join(WORKING_dir, 'config.yaml')
 
+#Aliases
+CASA_alias = config['casa_alias']
+CHGCENTRE_alias = config['chgcentre_alias']
+
 #The field_ID_mapping is an ID to UNIX timestamp mapping
 #We use only the keys in the Snakefile, but in the actual rules the configfile is
 #used based on the ID's basically
@@ -121,11 +125,12 @@ rule split_otf_scans_by_pointing:
         output_otf_dir = OTF_OUTPUT_dir,
         log_dir = LOG_dir,
         yaml_path = YAML_path,
-        casa_executable = os.path.join(OTF_OUTPUT_dir, 'split_otf_pointing_no_{field_ID}.py')
+        casa_executable = os.path.join(OTF_OUTPUT_dir, 'split_otf_pointing_no_{field_ID}.py'),
+        casa_alias = CASA_alias
     shell:
         'arcane_otfms_split -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log ; ' +\
-        'casa --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
+        '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log 2>&1 ; ' +\
         'arcane_otfms_split -p -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_split.log '
@@ -161,12 +166,13 @@ rule apply_phase_rotation:
     params:
         output_otf_dir = OTF_OUTPUT_dir,
         log_dir = LOG_dir,
-        yaml_path = YAML_path
+        yaml_path = YAML_path,
+        chgcentre_alias = CHGCENTRE_alias
     log:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_chgcentre.log'
     shell:
-        'chgcentre {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
+        '{params.chgcentre_alias} {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
         '$(arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '-ds -l {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log) ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log 2>&1'
@@ -189,11 +195,12 @@ rule merge_scan_and_target:
         log_dir = LOG_dir,
         output_dir = OUTPUT_dir,
         output_MS = os.path.join(OUTPUT_dir,'final.ms'),
-        casa_executable = os.path.join(OUTPUT_dir, 'merge_otf_pointings.py')
+        casa_executable = os.path.join(OUTPUT_dir, 'merge_otf_pointings.py'),
+        casa_alias = CASA_alias
     shell:
         'arcane_otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\
         '> {params.log_dir}/merge_scans.log ; ' +\
-        'casa --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
+        '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
         '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
         'arcane_otfms_merge -p -c {params.yaml_path} -o {params.output_MS} ' +\
         '>> {params.log_dir}/merge_scans.log '

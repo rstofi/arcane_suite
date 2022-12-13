@@ -34,3 +34,7 @@ _MSV2_CORR_TYPE_DICT = {1: 'I',
 global _VALID_LOG_LEVELS
 
 _VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
+
+# Define base name for software
+_SNAKEMAKE_BASE_NAME = 'snakemake'
+_CASA_BASE_NAME = 'casa'
