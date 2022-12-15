@@ -55,6 +55,7 @@ workdir: config['working_dir']
 WORKING_dir = config['working_dir'] #Don't need this explicitly
 MS_dir = config['MS']
 POINTING_REF_file = config['pointing_ref']
+OTF_acronym = config['OTF_acronym']
 LOG_dir = config['log_dir']
 OUTPUT_dir = config['output_dir']
 OTF_OUTPUT_dir = config['output_otf_dir']

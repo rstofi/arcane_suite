@@ -22,6 +22,7 @@ from arcane_pipelines.otfms import otfms_defaults
 
 # === Set logging
 logger = pipeline.init_logger(color=True)
+logger.setLevel(logging.INFO)
 
 # Add logging from modules
 utils_logger = logging.getLogger('arcane_utils')
@@ -134,8 +135,23 @@ def main():
         help='If enabled, the code skip checking for Snakemake and not performing the dry run',
         action='store_true')
 
+    parser.add_argument(
+        '-vd',
+        '--verbosity_debug',
+        required=False,
+        help='If enabled, the log level is set to DEBUG',
+        action='store_true')
+
     # ===========================================================================
     args = parser.parse_args()  # Get the arguments
+
+    # Set up log level
+    if args.verbosity_debug:
+        logger.setLevel(logging.DEBUG)
+        utils_logger.setLevel(logging.DEBUG)
+        pipelines_logger.setLevel(logging.DEBUG)
+
+        logger.debug('Set log level to DEBUG ...')
 
     if args.template:
         logger.info(
@@ -214,7 +230,7 @@ def main():
             # Because the files under `working_dir` will be overwritten
 
     # Get the input data
-    MS_path, pointing_ref_path = putil.get_otfms_data_variables(
+    MS_path, pointing_ref_path, split_calibrators = putil.get_otfms_data_variables(
         args.config_file)
 
     if not os.path.exists(MS_path):
@@ -243,27 +259,42 @@ def main():
 
     calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, \
         time_crossmatch_threshold, split_timedelta = \
-        putil.get_otfms_data_selection_from_config(args.config_file)
+        putil.get_otfms_data_selection_from_config(args.config_file,
+                                                   split_calibrators=split_calibrators)
 
     # Check if calibrator and target fields are in the MS
     field_Name_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(
         MS, ant1_ID=ant1_ID, ant2_ID=ant2_ID, close=False)
 
-    for calibrator in calibrator_list:
-        if calibrator not in field_Name_ID_dict.keys():
-            raise ValueError(
-                "Calibrator field '{0:s}' not found in the input MS!".format(calibrator))
+    if split_calibrators:
+        for calibrator in calibrator_list:
+            if calibrator not in field_Name_ID_dict.keys():
+                raise ValueError(
+                    "Calibrator field '{0:s}' not found in the input MS!".format(calibrator))
 
-    del calibrator
+        # The [1:-1] removes the [] from the string
+        logger.info(
+            "Selected calibrator field(s): {0:s} ...".format(
+                str(calibrator_list)[
+                    1:-1]))
+
+        del calibrator
+    else:
+        logger.info('No calibrator fields are selected...')
 
     for target in target_field_list:
         if target not in field_Name_ID_dict.keys():
             raise ValueError(
                 "Target field '{0:s}' not found in the input MS!".format(target))
 
+    logger.info(
+        "Selected OTF scan field(s): {0:s} ...".format(
+            str(target_field_list)[
+                1:-1]))
+
     if len(target_field_list) > 1:
         logger.warning(
-            'Single target field processing is currently supported only!')
+            'Currently only single target field processing is supported!')
 
     del target
 
@@ -357,10 +388,13 @@ def main():
     if np.size(cross_matched_reference_times) == 0:
         raise ValueError('No valid OTF pointing selection can be made!')
 
-    logger.info('{0:d} OTF pointings selected...'.format(
+    logger.info('{0:d} OTF pointings are selected...'.format(
         np.size(cross_matched_reference_times)))
 
-    ms_wrapper.close_MS_table_object(MS)
+    # === Configure output and garbage collection
+    logger.debug('Configuring output and garbage collection...')
+
+    OTF_acronym = putil.get_otfms_output_variables(args.config_file)
 
     # === Create pipeline
     logger.info('Building Snakemake pipeline...')
@@ -400,24 +434,35 @@ def main():
             MS_path))
         sconfig.write('pointing_ref:\n  {0:s}\n'.format(
             pointing_ref_path))
-        sconfig.write('time_crossmatch_threshold:\n  {0:.8f}\n'.format(
+        sconfig.write("OTF_acronym:  '{0:s}'\n".format(
+            OTF_acronym))
+        sconfig.write('time_crossmatch_threshold:  {0:.8f}\n'.format(
             time_crossmatch_threshold))
-        sconfig.write('split_timedelta:\n  {0:.8f}\n'.format(
+        sconfig.write('split_timedelta:  {0:.8f}\n'.format(
             split_timedelta))
-        sconfig.write("casa_alias:\n  '{0:s}'\n".format(
+        sconfig.write("casa_alias:  '{0:s}'\n".format(
             command_line_tool_alias_dict['casa_alias']))
-
-        sconfig.write("chgcentre_alias:\n  '{0:s}'\n".format(
+        sconfig.write("chgcentre_alias:  '{0:s}'\n".format(
             command_line_tool_alias_dict['chgcentre_alias']))
 
-        # List of calibrators and target fields
-        sconfig.write('calibrator_fields:\n')
-        for i in range(0, np.size(calibrator_list)):
-            sconfig.write("  - {0:s}\n".format(calibrator_list[i]))
+        # === List of calibrators and target fields
 
+        # Calibrator field(s)
+        sconfig.write(
+            'split_calibrators: {0:s}\n'.format(
+                str(split_calibrators)))
+
+        if split_calibrators:
+            sconfig.write('calibrator_fields:\n')
+            for i in range(0, np.size(calibrator_list)):
+                sconfig.write("  - {0:s}\n".format(calibrator_list[i]))
+        else:
+            sconfig.write('calibrator_fields:\n')
+
+        # Target field(s)
         sconfig.write('target_fields:\n')
         for i in range(0, np.size(target_field_list)):
-            sconfig.write("  - {0:s}\n".format(target_field_list[i]))
+            sconfig.write("  - '{0:s}'\n".format(target_field_list[i]))
 
         # Build field_ID dict
         sconfig.write('otf_field_ID_mapping:\n')

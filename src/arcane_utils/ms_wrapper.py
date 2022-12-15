@@ -28,7 +28,12 @@ logger = logging.getLogger(__name__)
 # === Functions ===
 
 
-def create_MS_table_object(mspath, readonly=True, **kwargs):
+def create_MS_table_object(
+        mspath,
+        readonly=True,
+        is_table=False,
+        table_name=None,
+        **kwargs):
     """This function aims to speed up other bits of this module,
     by returning a ``casacore.tables.table.table`` object.
     The trick is, that the ``mspath`` argument can be either a string i.e. the path
@@ -45,6 +50,13 @@ def create_MS_table_object(mspath, readonly=True, **kwargs):
 
     readonly: bool, optional
         If True, the tables of the MS can be read only, but if set to False one can modify the MS
+
+    is_table: bool, opt
+        If the function is used to close a table opened, this should be passed so
+        the logs are more readable
+
+    table_name: str, opt
+        The name of the table closed
 
     Returns
     -------
@@ -65,13 +77,24 @@ def create_MS_table_object(mspath, readonly=True, **kwargs):
         return mspath
     else:
         # We know it is a string in this case
-        logger.debug('Open MS: {0:s}'.format(str(mspath)))
+        if is_table:
+            if table_name is not None:
+                logger.debug(
+                    "Open MS table '{0:s}': {1:s}".format(
+                        table_name, str(mspath)))
+
+            else:
+                logger.debug('Open MS table: {0:s}'.format(str(mspath)))
+        else:
+            logger.debug('Open MS: {0:s}'.format(str(mspath)))
+
         MS = casatables.table(mspath, ack=_ACK, readonly=readonly)
         MS_type_tmp.close()
+
         return MS
 
 
-def close_MS_table_object(mspath):
+def close_MS_table_object(mspath, is_table=False, table_name=None):
     """This bit of code should be called at the end of whan working with an MS.
     Basically only closes the MS opened in the beginning. Aims to prevent memory
     leaks and just implementing good practices...
@@ -80,6 +103,13 @@ def close_MS_table_object(mspath):
     ----------
     mspath: str
         The input MS path or a ``casacore.tables.table.table`` object
+
+    is_table: bool, opt
+        If the function is used to close a table opened, this should be passed so
+        the logs are more readable
+
+    table_name: str, opt
+        The name of the table closed
 
     Returns
     -------
@@ -91,7 +121,14 @@ def close_MS_table_object(mspath):
 
     # if type(mspath) == 'casacore.tables.table.table':
     if isinstance(mspath, type(MS_type_tmp)):
-        logger.debug('Close MS')
+
+        if is_table:
+            if table_name is not None:
+                logger.debug("Close MS table '{0:s}'".format(table_name))
+            else:
+                logger.debug("Close MS table")
+        else:
+            logger.debug('Close MS')
 
         MS = create_MS_table_object(mspath)
         MS.close()
@@ -220,7 +257,8 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
     fieldtable_path = get_MS_subtable_path(MS, 'FIELD', close=False)
 
     # Open `FIELD` table and read the list of antennas
-    fieldtable = create_MS_table_object(fieldtable_path)
+    fieldtable = create_MS_table_object(
+        fieldtable_path, is_table=True, table_name='FIELD')
 
     # Set up the empty list
     fieldname_ID_dict = {}
@@ -242,7 +280,7 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
 
     del i
 
-    close_MS_table_object(fieldtable)
+    close_MS_table_object(fieldtable, is_table=True, table_name='FIELD')
 
     # The fieldname ID dict has to be creted to generate the scanname_ID_disct:
     if scan_ID:
@@ -498,7 +536,11 @@ def rename_single_field(mspath,
     for ftable_name in table_list:
         ftable_path = get_MS_subtable_path(MS, ftable_name, close=False)
 
-        ftable = create_MS_table_object(ftable_path, readonly=False)
+        ftable = create_MS_table_object(
+            ftable_path,
+            is_table=True,
+            table_name=ftable_name,
+            readonly=False)
 
         if ftable.rownumbers() == []:
             logger.warning('The table {0:s} is empty!'.format(
@@ -515,7 +557,7 @@ def rename_single_field(mspath,
             logger.debug('New NAME in table {0:s}: {1:s}'.format(
                 ftable_name, ftable.getcol('NAME')[field_ID]))
 
-        close_MS_table_object(ftable)
+        close_MS_table_object(ftable, is_table=True, table_name=ftable_name)
 
     if close:
         close_MS_table_object(MS)

@@ -12,7 +12,8 @@ __all__ = [
     'add_aliases_to_config_file',
     'add_unique_defaults_to_config_file',
     'check_snakemake_installation',
-    'check_is_installed']
+    'check_is_installed',
+    'str_to_bool']
 
 import sys
 import os
@@ -25,7 +26,8 @@ import subprocess
 
 from shutil import which
 
-from arcane_utils.globals import _VALID_LOG_LEVELS, _SNAKEMAKE_BASE_NAME
+from arcane_utils.globals import _VALID_LOG_LEVELS, _SNAKEMAKE_BASE_NAME, \
+    _PARAM_WHITESPACE_SKIP, _COMMENT_WHITESPACE_SKIP
 
 # === Set up logging
 logger = logging.getLogger(__name__)
@@ -442,8 +444,9 @@ arcane_suit at {1:s}\n'.format(pipeline_name, str(datetime.datetime.now())))
 
         aconfig.write('\n[ENV]\n')
 
-        aconfig.write(f"{'working_dir':<30}" +
-                      f"{'= ':<5}" + '#Mandatory, absolute path\n')
+        aconfig.write(f"{'working_dir':<{_PARAM_WHITESPACE_SKIP}}" +
+                      f"{'= {0:s}':<{_COMMENT_WHITESPACE_SKIP}}".format('') +
+                      '#Mandatory, absolute path\n')
 
 
 def add_aliases_to_config_file(
@@ -497,8 +500,8 @@ def add_aliases_to_config_file(
         if defaults_list is None:
             for i in aliases_list:
                 aconfig.write(
-                    f"{'{0:s}'.format(i):<30}" +
-                    f"{'= ':<5}" +
+                    f"{'{0:s}'.format(i):<{_PARAM_WHITESPACE_SKIP}}" +
+                    f"{'= {0:s}':<{_COMMENT_WHITESPACE_SKIP}}".format('') +
                     '#Optional, string\n')
 
         else:
@@ -507,10 +510,10 @@ def add_aliases_to_config_file(
                     'The input aliases and defaults lists have different shape!')
             else:
                 for i, j in zip(aliases_list, defaults_list):
+                    whitespace_skip = _COMMENT_WHITESPACE_SKIP - len(j)
                     aconfig.write(
-                        f"{'{0:s}'.format(i):<30}" +
-                        f"{'= ':<5}" +
-                        '{0:s} '.format(j) +
+                        f"{'{0:s}'.format(i):<{_PARAM_WHITESPACE_SKIP}}" +
+                        f"{'= {0:s}':<{whitespace_skip}}".format(j) +
                         '#Optional, string\n')
 
 
@@ -577,15 +580,21 @@ def add_unique_defaults_to_config_file(template_path, unique_defaults_dict):
                 for unique_params in unique_defaults_dict[unique_sections]:
 
                     if unique_defaults_dict[unique_sections][unique_params][1]:
+                        whitespace_skip = _COMMENT_WHITESPACE_SKIP - \
+                            len(unique_defaults_dict[unique_sections][unique_params][0])
                         aconfig.write(
                             f"{'{0:s}'.format(unique_params):<30}" +
-                            f"{'= ':<5}" +
+                            f"{'= {0:s}':<{whitespace_skip}}".format(
+                                unique_defaults_dict[unique_sections][unique_params][0]) +
                             '#Mandatory, {0:s}\n'.format(
                                 unique_defaults_dict[unique_sections][unique_params][2]))
                     else:
+                        whitespace_skip = _COMMENT_WHITESPACE_SKIP - \
+                            len(unique_defaults_dict[unique_sections][unique_params][0])
                         aconfig.write(
                             f"{'{0:s}'.format(unique_params):<30}" +
-                            f"{'= ':<5}" +
+                            f"{'= {0:s}':<{whitespace_skip}}".format(
+                                unique_defaults_dict[unique_sections][unique_params][0]) +
                             '#Optional, {0:s}\n'.format(
                                 unique_defaults_dict[unique_sections][unique_params][2]))
 
@@ -615,6 +624,40 @@ def get_var_from_yaml(yaml_path, var_name):
                 'Error while parsing the yaml file: {0:s}'.format(e))
 
     return yaml_dict[var_name]
+
+
+def str_to_bool(bool_string):
+    """Convert a string to a boolean value. Working for the following strings:
+        - True
+        - true
+        - False
+        - false
+
+    NOTE that VAlueERROR is raised is the string is invalid
+
+    Parameters:
+    -----------
+    bool_string: str
+        The string to convert
+
+    Returns
+    -------
+    bool_val: bool
+        The boolean equivalent of the string
+
+    """
+    if bool_string == 'True':
+        bool_val = True
+    elif bool_string == 'true':
+        bool_val = True
+    elif bool_string == 'False':
+        bool_val = False
+    elif bool_string == 'false':
+        bool_val = False
+    else:
+        raise ValueError('Invalid string passed to `str_to_bool()`!')
+
+    return bool_val
 
 
 # === MAIN ===

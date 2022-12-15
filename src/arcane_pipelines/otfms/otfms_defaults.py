@@ -3,7 +3,6 @@
 
 from arcane_utils.globals import _SNAKEMAKE_BASE_NAME, _CASA_BASE_NAME
 
-
 # Define the default alias names and values for the command line tools
 # used by the pipeline
 
@@ -22,11 +21,15 @@ _otfms_default_config_dict = {'ENV': {
     'DATA': {
     'MS': ['', True, 'absolute path'],
     'pointing_ref': ['', True, 'absolute path'],
-    'calibrator_list': ['', False, 'comma separated list'],
     'target_field_list': ['', True, 'comma separated list'],
-    'scans': ['', False, 'comma separated list of scan IDs'],
-    'timerange': ['', False, 'CASA-style timerange'],
-    'ant1_ID': ['', False, 'int'],
-    'ant2_ID': ['', False, 'int'],
-    'time_crossmatch_threshold': ['', False, 'float'],
-    'split_timedelta': ['', False, 'float']}}
+    'split_calibrators': ['False', True, "boolean"],
+    'calibrator_list': ['', False, 'comma separated list or none'],
+    'scans': ['', False, 'comma separated list of scan IDs or none'],
+    'timerange': ['', False, 'CASA-style timerange or none'],
+    'ant1_ID': ['0', False, 'int or none'],
+    'ant2_ID': ['1', False, 'int or none'],
+    'time_crossmatch_threshold': ['0.001', False, 'float or none'],
+    'split_timedelta': ['0.5', False, 'float or none']},
+    'OUTPUT': {
+    'OTF_acronym': ['OTFasp', True, 'string']
+}}

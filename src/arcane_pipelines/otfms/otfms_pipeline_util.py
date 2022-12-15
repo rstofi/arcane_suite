@@ -7,7 +7,8 @@ __all__ = [
     'init_config_for_otfms',
     'get_times_from_reference_pointing_file',
     'get_pointing_from_reference_pointing_file',
-    'get_pointing_and_times_from_reference_pointing_file']
+    'get_pointing_and_times_from_reference_pointing_file',
+    'get_otfms_output_variables']
 
 import sys
 import logging
@@ -22,6 +23,7 @@ from arcane_utils import time as a_time
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
+# Load pipeline default parameters
 from arcane_pipelines.otfms import otfms_defaults
 
 # === Set up logging
@@ -59,7 +61,8 @@ def init_config_for_otfms(
 
     pipeline.add_aliases_to_config_file(
         template_path=template_path,
-        aliases_list=otfms_defaults._otfms_default_aliases)
+        aliases_list=otfms_defaults._otfms_default_aliases,
+        defaults_list=otfms_defaults._otfms_default_alias_values)
 
     pipeline.add_unique_defaults_to_config_file(
         template_path=template_path,
@@ -91,21 +94,37 @@ def get_otfms_data_variables(config_path):
     MS_dir = pipeline.remove_comment(MS_dir).strip()
 
     if MS_dir == '':
-        raise ValueError('Missing mandatory parameter: MS')
+        raise ValueError("Missing mandatory parameter: 'MS'")
 
     pointing_ref = config.get('DATA', 'pointing_ref')
     pointing_ref = pipeline.remove_comment(pointing_ref).strip()
 
     if pointing_ref == '':
-        raise ValueError('Missing mandatory parameter: pointing_ref')
+        raise ValueError("Missing mandatory parameter: 'pointing_ref'")
 
-    return MS_dir, pointing_ref
+    try:
+        split_calibrators = config['DATA'].getboolean('split_calibrators')
+    # If there are comments in the line
+    except BaseException:
+        split_calibrators_string = config.get('DATA', 'split_calibrators')
+        split_calibrators_string = pipeline.remove_comment(
+            split_calibrators_string).strip()
+
+        try:
+            split_calibrators = pipeline.str_to_bool(split_calibrators_string)
+        except BaseException:
+            logger.warning(
+                "Invalid argument given to 'split_calibrators', set it to False...")
+            split_calibrators = False
+
+    return MS_dir, pointing_ref, split_calibrators
 
 
-def get_otfms_data_selection_from_config(config_path):
+def get_otfms_data_selection_from_config(config_path, split_calibrators=False):
     """Reads the data selection for the OTF to MS conversion from the config file:
 
-    In the config file the calibrators and targets MUST be specifyed. The other
+    In the config file the targets MUST be specifyed, and if we awant to split the
+    calibrators. If yest, the calibrator field also need to be defined. The other
     selection options are optional. If no values are specifyed, all scans and times
     will be used for the OTF to MS conversion.
 
@@ -190,13 +209,24 @@ def get_otfms_data_selection_from_config(config_path):
     # ---------------------------------------------------------------------------
 
     # Mandatory
-    calibrator_list = get_string_list('DATA', 'calibrator_list')
+    #calibrator_list = get_string_list('DATA', 'calibrator_list')
     target_field_list = get_string_list('DATA', 'target_field_list')
 
-    if len(calibrator_list) == 1 and calibrator_list[0] == '':
-        raise ValueError('Missing mandatory parameter: calibrator_list')
+    # if len(calibrator_list) == 1 and calibrator_list[0] == '':
+    #    raise ValueError('Missing mandatory parameter: calibrator_list')
     if len(target_field_list) == 1 and target_field_list[0] == '':
         raise ValueError('Missing mandatory parameter: target_field_list')
+
+    # Check if calibrator list is needed
+    calibrator_list = get_string_list('DATA', 'calibrator_list')
+
+    if split_calibrators:
+        # Check if calibrators are not defined
+        if len(calibrator_list) == 1 and calibrator_list[0] == '':
+            raise ValueError(
+                "Missing mandatory parameter (based on 'split_calibrators' = true): 'calibrator_list'")
+    else:
+        calibrator_list = []  # Return empty list
 
     # Optional
     try:
@@ -214,7 +244,7 @@ def get_otfms_data_selection_from_config(config_path):
     except Exception as e:  # Catch the error message
         logger.warning(
             'An error occured while parsing timerange value:', exc_info=e)
-        logger.info('Setting timerange to None')
+        logger.info('Set timerange to None')
         timerange = None
 
     try:  # If a single scan ID is provided
@@ -236,43 +266,63 @@ def get_otfms_data_selection_from_config(config_path):
                     'Invalid scan ID(s): ignoring user input and use all scans...')
                 scans = None
 
+    # === ant1_ID
+    default_ant1_ID = int(
+        otfms_defaults._otfms_default_config_dict['DATA']['ant1_ID'][0])
+
     try:
-        ant1_ID = config.getint('DATA', 'ant1_ID', fallback=0)
-    except ValueError:
+        ant1_ID = config.getint('DATA', 'ant1_ID', fallback=default_ant1_ID)
+        logger.debug("Set 'ant1_ID' to {0:s} ...".format(ant1_ID))
+    except ValueError:  # When there is a comment
         ant1_ID_string = config.get('DATA', 'ant1_ID')
         ant1_ID_string = pipeline.remove_comment(ant1_ID_string)
 
         try:
-            ant1_ID = int(ant1_ID_string)
+            ant1_ID = int(ant1_ID_string.strip())
+            logger.debug("Set 'ant1_ID' to {0:d} ...".format(ant1_ID))
         except BaseException:
             if ant1_ID_string.strip() != '':
-                logger.warning('Invalid format for ant1_ID!')
-                logger.info('Setting ant1_ID to 0')
+                logger.warning("Invalid format for 'ant1_ID'!")
+                logger.debug(
+                    "Fallback to default and set 'ant1_ID' to {0:d} ...".format(default_ant1_ID))
+                ant1_ID = default_ant1_ID
+            else:
+                logger.debug(
+                    "No 'ant1_ID' is defined, fallback to default: {0:d} ...".format(default_ant1_ID))
+                ant1_ID = default_ant1_ID
 
-            ant1_ID = 0
+    # === ant2_ID
+    default_ant2_ID = int(
+        otfms_defaults._otfms_default_config_dict['DATA']['ant2_ID'][0])
 
     try:
-        ant2_ID = config.getint('DATA', 'ant2_ID', fallback=1)
+        ant2_ID = config.getint('DATA', 'ant2_ID', fallback=default_ant2_ID)
+        logger.debug("Set 'ant2_ID' to {0:s} ...".format(ant2_ID))
     except ValueError:
         ant2_ID_string = config.get('DATA', 'ant2_ID')
         ant2_ID_string = pipeline.remove_comment(ant2_ID_string)
         try:
-            ant2_ID = int(ant2_ID_string)
+            ant2_ID = int(ant2_ID_string.strip())
+            logger.debug("Set 'ant2_ID' to {0:d} ...".format(ant2_ID))
         except BaseException:
             if ant2_ID_string.strip() != '':
-                logger.warning('Invalid format for ant2_ID!')
-                logger.info('Setting ant2_ID to 1')
-
-            ant2_ID = 1
+                logger.warning("Invalid format for 'ant2_ID'!")
+                logger.debug(
+                    "Fallback to default and set 'ant2_ID' to {0:d} ...".format(default_ant2_ID))
+                ant1_ID = default_ant2_ID
+            else:
+                logger.debug(
+                    "No 'ant2_ID' is defined, fallback to default: {0:d} ...".format(default_ant2_ID))
+                ant2_ID = default_ant2_ID
 
     if ant1_ID == ant2_ID:
         if ant1_ID != 0:
             logger.warning(
-                'ant1_ID and ant2_ID are equal, setting ant2_ID to 0')
+                "'ant1_ID' and 'ant2_ID' are equal, set 'ant2_ID' to 0")
             ant2_ID = 0
         else:
             logger.warning(
-                'ant1_ID and ant2_ID are equal, setting ant2_ID to 1')
+                "'ant1_ID' and 'ant2_ID' are equal, set 'ant2_ID' to 1")
             ant2_ID = 1
 
     # Note that ANTENNA1 *always* have a smaller ID number than ANTENNA2 in an MS
@@ -280,45 +330,118 @@ def get_otfms_data_selection_from_config(config_path):
 
     if ant1_ID > ant2_ID:
         logger.debug(
-            'Swapping ant1_ID and ant2_ID to make sure baseline exists in MS')
+            "Swapping 'ant1_ID' and 'ant2_ID' to make sure baseline exists in MS")
         # Swapping two variables without a teporary variable
         ant1_ID, ant2_ID = ant2_ID, ant1_ID
 
+    # === time_crossmatch_threshold
+
     # Default is to set to be 0.001 i.e. a millisecond
+    default_time_crossmatch_threshold = float(
+        otfms_defaults._otfms_default_config_dict['DATA']['time_crossmatch_threshold'][0])
+
     try:
         time_crossmatch_threshold = config.getfloat(
-            'DATA', 'time_crossmatch_threshold', fallback=0.001)
+            'DATA',
+            'time_crossmatch_threshold',
+            fallback=default_time_crossmatch_threshold)
+        logger.debug("Set 'time_crossmatch_threshold' to {0:.4f} ...".format(
+            time_crossmatch_threshold))
     except ValueError:
         time_crossmatch_threshold_string = config.get(
             'DATA', 'time_crossmatch_threshold')
         time_crossmatch_threshold_string = pipeline.remove_comment(
             time_crossmatch_threshold_string)
 
-        if time_crossmatch_threshold_string.strip() != '':
-            logger.warning(
-                'Invalid format format for time_crossmatch_threshold!')
-            logger.info('Setting time_crossmatch_threshold to 0.0001')
+        try:
+            time_crossmatch_threshold = float(
+                time_crossmatch_threshold_string.strip())
+            logger.debug("Set 'time_crossmatch_threshold' to {0:.4f} ...".format(
+                time_crossmatch_threshold))
+        except BaseException:
+            if time_crossmatch_threshold_string.strip() != '':
+                logger.warning(
+                    "Invalid format format for 'time_crossmatch_threshold' fallback to default: {0:.4f} ...".format(
+                        default_time_crossmatch_threshold))
 
-        time_crossmatch_threshold = 0.0001
+                time_crossmatch_threshold = default_time_crossmatch_threshold
+            else:
+                logger.debug("No 'time_crossmatch_threshold' is defined, fallback to default: {0:.4f} ...".format(
+                    default_time_crossmatch_threshold))
+
+                time_crossmatch_threshold = default_time_crossmatch_threshold
+
+    # === split_timedelta
+
+    default_split_timedelta = float(
+        otfms_defaults._otfms_default_config_dict['DATA']['split_timedelta'][0])
 
     # Default is to set to be 0.5s so the time selection will happen within
     # +/- 0.25 s
     try:
         split_timedelta = config.getfloat(
-            'DATA', 'split_timedelta', fallback=0.5)
+            'DATA', 'split_timedelta', fallback=default_split_timedelta)
+        logger.debug("Set 'split_timedelta' to {0:.4f} ...".format(
+            split_timedelta))
     except ValueError:
         split_timedelta_string = config.get('DATA', 'split_timedelta')
         split_timedelta_string = pipeline.remove_comment(
             split_timedelta_string)
 
-        if split_timedelta_string.strip() != '':
-            logger.warning('Invalid format format for split_timedelta!')
-            logger.info('Setting split_timedelta to 1')
+        try:
+            split_timedelta = float(split_timedelta_string.strip())
+            logger.debug("Set 'split_timedelta' to {0:.4f} ...".format(
+                split_timedelta))
 
-        split_timedelta = 0.5
+        except BaseException:
+            if split_timedelta_string.strip() != '':
+                logger.warning(
+                    "Invalid format format for 'split_timedelta' fallback to default: {0:.4f} ...".format(
+                        default_split_timedelta))
+
+                split_timedelta = default_split_timedelta
+            else:
+                logger.debug("No 'split_timedelta' is defined, fallback to default: {0:.4f} ...".format(
+                    default_split_timedelta))
+
+                split_timedelta = default_split_timedelta
 
     return calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, \
         time_crossmatch_threshold, split_timedelta
+
+
+def get_otfms_output_variables(config_path):
+    """Get the unique OUTPUT parameters defined in the config file
+
+
+    Parameters
+    ----------
+    config_path: str
+        Path to the config file initializing the pipeline
+
+    Returns
+    -------
+    OTF_acronym: str
+        The acronym used to name the OTF pointings
+
+    """
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read(config_path)
+
+    OTF_acronym = config.get('OUTPUT', 'OTF_acronym')
+    OTF_acronym = pipeline.remove_comment(OTF_acronym).strip()
+
+    if OTF_acronym == '':
+        #raise ValueError("Missing mandatory parameter: 'OTF_acronym'")
+        logger.warning(
+            "Missing mandatory parameter: 'OTF_acronym' fallback to default: {0:s}".format(
+                otfms_defaults._otfms_default_config_dict['OUTPUT']['OTF_acronym'][0]))
+
+        OTF_acronym = otfms_defaults._otfms_default_config_dict['OUTPUT']['OTF_acronym'][0]
+
+    logger.info("Set 'OTF_acronym' to {0:s} ...".format(OTF_acronym))
+
+    return OTF_acronym
 
 
 def get_times_from_reference_pointing_file(refrence_pointing_npz):
@@ -529,7 +652,7 @@ def generate_OTF_names_from_ra_dec(ra, dec, acronym='OTFasp'):
 
 
 def generate_position_string_for_chgcentre(ra, dec):
-    """
+    """Generate a string that `chgcentre` can read from RA and Dec coordinates
 
     Parameters
     ----------
@@ -539,6 +662,9 @@ def generate_position_string_for_chgcentre(ra, dec):
     dec: float
         Dec of the field centre in degrees
 
+    Returns
+    -------
+    A coordinate string of 'hm.4sdm.4s'
 
     """
 

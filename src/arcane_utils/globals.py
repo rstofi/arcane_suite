@@ -36,5 +36,10 @@ global _VALID_LOG_LEVELS
 _VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 
 # Define base name for software
+_PYTHON_BASE_NAME = 'python'
 _SNAKEMAKE_BASE_NAME = 'snakemake'
 _CASA_BASE_NAME = 'casa'
+
+# Define the base whitespace skips for creating config files
+_PARAM_WHITESPACE_SKIP = 30
+_COMMENT_WHITESPACE_SKIP = 20
