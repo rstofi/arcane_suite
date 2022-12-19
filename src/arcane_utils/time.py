@@ -13,7 +13,7 @@ import sys
 import logging
 import time
 import numpy as np
-from numba import jit
+#from numba import jit
 
 from astropy.time import Time
 
