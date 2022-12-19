@@ -42,11 +42,11 @@ def check_casa_installation(casa_alias, pedantic=False):
     # Check if CASA is installed as CASA
     is_casa_installed = False
 
-    casa_installations = which(_CASA_BASE_NAME)
+    casa_installation = which(_CASA_BASE_NAME)
 
-    if casa_installations is not None:
+    if casa_installation is not None:
         logger.debug(
-            'Found CASA installation at: {}'.format(casa_installations))
+            'Found CASA installation at: {}'.format(casa_installation))
 
         is_casa_installed = True
 
@@ -59,13 +59,18 @@ def check_casa_installation(casa_alias, pedantic=False):
             logger.critical("No CASA installation found that can be called \
 via the '{0:s}' command, but found a CASA installation under {1:s} . Please change \
 the casa_alias in the config file!".format(
-                casa_alias, casa_installations))
+                casa_alias, casa_installation))
 
         else:
             if pedantic:
                 raise ValueError("No CASA installation found!")
             else:
                 logger.critical("No CASA installation found!")
+
+    else:
+        if not casa_installation:
+            logger.warning(
+                "Found '{0:s}' executable, but no 'casa' installation ...".format(casa_alias))
 
 
 # === MAIN ===

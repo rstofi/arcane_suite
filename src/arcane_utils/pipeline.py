@@ -216,12 +216,16 @@ def check_snakemake_installation(snakemake_alias, pedantic=True):
 installation under {1:s} . Please change snakemake_alias in the config file!".format(
                     snakemake_alias, snakemake_installation))
     else:
-        if pedantic:
-            raise ValueError(
-                'No Snakemake installation have been found on the system!')
+        if is_command_line_tool(snakemake_alias) == False:
+            if pedantic:
+                raise ValueError(
+                    'No Snakemake installation have been found on the system!')
+            else:
+                logger.critical(
+                    'No Snakemake installation have been found on the system!')
         else:
-            logger.critical(
-                'No Snakemake installation have been found on the system!')
+            logger.warning(
+                "Found '{0:s}'' executable, but no 'snakemake' installation!".format(snakemake_alias))
 
 
 def check_is_installed(command_line_tool_alias, pedantic=False):
@@ -274,6 +278,11 @@ the alias in the config file!".format(
             else:
                 logger.critical("No '{0:s}' installation found!".format(
                     command_line_tool_alias))
+
+    else:
+        if not is_program_installed:
+            logger.warning("Found '{0:s}' executable, but no '{0:s}' installation ...".format(
+                command_line_tool_alias))
 
 
 def argflatten(arg_list):
