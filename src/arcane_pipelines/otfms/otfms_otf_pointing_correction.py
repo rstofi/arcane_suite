@@ -8,10 +8,14 @@ import argparse
 import numpy as np
 import datetime
 
+from astropy.coordinates import SkyCoord
+from astropy import units as u
+
 from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
 
 from arcane_pipelines.otfms import otfms_pipeline_util as putil
+from arcane_pipelines.otfms import otfms_defaults
 
 # === Set logging
 #logger = pipeline.init_logger()
@@ -60,11 +64,12 @@ def save_names_only(yaml_path, output_fname):
 
 
 def main():
-    """A custom tool with three purposes:
+    """A custom tool with four purposes:
 
         1. Rename the field (and the corresponding source and pointing) for a given OTF pointing
-        2. Create a file with all OTF IDs and the names
+        2. Create a file with all OTF IDs and the associated names
         3. Output a string that is readable by `chagcentre`
+        4. Check if the renamed field position is "close to" the naming position
 
     As such, this tool is used in *three* rules in the pipeline. For once, it is called
     for every OTF pointing to rename the pointing before rotation and merging.
@@ -99,9 +104,12 @@ def main():
         action='store',
         type=str)
 
-    parser.add_argument('-i', '--otf_id', required=False,
-                        help='The ID of the OTF pointing used',
-                        action='store', type=str, default=None)
+    parser.add_argument(
+        '-i',
+        '--otf_id',
+        required=False,
+        help='The ID of the OTF pointing used',
+        action='store', type=str, default=None)
 
     parser.add_argument(
         '-sn',
@@ -133,6 +141,21 @@ def main():
         help='The output log file name, only considered when the -ds argument is set',
         action='store',
         type=str,
+        default=None)
+
+    parser.add_argument(
+        '-dc',
+        '--direction_check',
+        required=False,
+        help="If given, the code checks if the MS phase centre and the direction from the name are 'close enough'",
+        action='store_true')
+
+    parser.add_argument(
+        '-dt',
+        '--direction_tolerance',
+        required=False,
+        help="Only works if --direction_check is set to True. The threshold defining 'close enough'",
+        type=float,
         default=None)
 
     # ===========================================================================
@@ -170,7 +193,7 @@ def main():
         logger.info("Running *otf_pointing_correction* in 'chgcentre' " +
                     "mode with OTF_ID: {0:s}".format(args.otf_id))
     else:
-        logger = pipeline.init_logger()
+        logger = pipeline.init_logger(log_level='DEBUG')
         logger.info("Running *otf_pointing_correction* in 'renaming' " +
                     "mode with OTF_ID: {0:s}".format(args.otf_id))
 
@@ -216,6 +239,61 @@ def main():
 
         # Now renaming the field
         otf_MS = ms_wrapper.create_MS_table_object(otf_MS_path)
+
+        # Check if the new field name, is "close to" the actual phase centre in
+        # the MS
+        if args.direction_check:
+            if args.direction_tolerance is None:
+                logger.warning("No 'direction_tolerance' is provided, fallback to default of {0:.4f}".format(
+                    float(otfms_defaults._otfms_default_config_dict['DATA']['position_crossmatch_threshold'][0])))
+
+                dir_tol = float(
+                    otfms_defaults._otfms_default_config_dict['DATA']['position_crossmatch_threshold'][0])
+
+            else:
+                logger.info(
+                    "Checking the MS phase centre position against the renaming \
+position with {0:.4f} deg direction tolerance".format(
+                        args.direction_tolerance))
+
+                dir_tol = float(args.direction_tolerance)
+
+            # Hnadle numerics, and if threshold is set to 0
+            if dir_tol == 0.:
+                logger.warning(
+                    "The direction separation tolerance is set to 0!")
+
+                dir_tol = 1e-7  # To handle numerics
+
+            phase_centres_field_IDs_dict = ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(
+                otf_MS, field_ID_list=[0], close=False)
+
+            phase_centre_coord = SkyCoord(
+                phase_centres_field_IDs_dict[0][0] * u.deg,
+                phase_centres_field_IDs_dict[0][1] * u.deg,
+                frame='icrs')  # Since only J2000 is supported currently
+
+            logger.debug(
+                "The phase centre coordinates: {0:s}".format(
+                    putil.generate_position_string_for_chgcentre(
+                        ra=phase_centre_coord.ra.deg,
+                        dec=phase_centre_coord.dec.deg)))
+
+            nominal_coords = SkyCoord(ra_centre * u.deg, dec_centre * u.deg,
+                                      frame='icrs')
+
+            logger.debug(
+                "The nominal coordinates from name: {0:s}".format(
+                    putil.generate_position_string_for_chgcentre(
+                        ra=nominal_coords.ra.deg,
+                        dec=nominal_coords.dec.deg)))
+
+            # Compute separation in degrees
+            sep = float(phase_centre_coord.separation(nominal_coords).deg)
+
+            if sep > dir_tol:
+                raise ValueError(
+                    "The separation of MS phase centre and name coordinates are over the matching threshold!")
 
         ms_wrapper.rename_single_field(mspath=otf_MS,
                                        field_ID=0,

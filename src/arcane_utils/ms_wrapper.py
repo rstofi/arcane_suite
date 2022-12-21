@@ -22,6 +22,10 @@ from arcane_utils import misc
 from arcane_utils.globals import _ACK
 from arcane_utils import time as a_time
 
+from arcane_utils.globals import _SUPPORTED_MS_COL_DIRECTION_KEYWORDS, \
+    _SUPPORTED_MS_COL_DIR_UNITS, \
+    _SUPPORTED_MS_COL_DIR_REFERENCES
+
 # === Set up logging
 logger = logging.getLogger(__name__)
 
@@ -56,7 +60,7 @@ def create_MS_table_object(
         the logs are more readable
 
     table_name: str, opt
-        The name of the table closed
+        The name of the table opened
 
     Returns
     -------
@@ -201,7 +205,7 @@ def get_fieldname_and_ID_list_dict_from_MS(mspath,
 
     NOTE: this routine is sub-optimal for scan IDs as it is working with the MAIN
             table. It uses the informatiuon in the FIELD table for getting the
-            fielkd names and IDs though.
+            field names and IDs though.
 
     NOTE: to **speed up** the code, I only select data associated with one baseline.
         Since, I query the information from the MAIN table, for MS with hundreds of
@@ -400,7 +404,8 @@ def get_time_based_on_field_names_and_scan_IDs(mspath,
     MS = create_MS_table_object(mspath)
 
     #This is fast
-    field_Name_ID_dict = get_fieldname_and_ID_list_dict_from_MS(mspath)
+    field_Name_ID_dict = get_fieldname_and_ID_list_dict_from_MS(
+        mspath, ant1_ID=ant1_ID, ant2_ID=ant2_ID)
 
     # Get the field selection
     if field_names is None:
@@ -561,6 +566,199 @@ def rename_single_field(mspath,
 
     if close:
         close_MS_table_object(MS)
+
+
+def check_dir_column_values(table_path,
+                            colname,
+                            table_name=None,
+                            close=False):
+    """A general script that checks if `arcane_suite` supports the data format and
+    reference frame of coordainates in an MS trough looking at the keywords.
+
+    The idea is, that some MS can have coordinates defined in B1950 or something
+    like this, which could break other parts of the code, so I have a check looking
+    at supported coordinate frames and units
+
+    TO DO: implement a similar approact to the TIME values instead of the soft
+        checks I curently doing
+
+    Parameters
+    ----------
+    table_path: str
+        The input path or an MS TABLE or a ``casacore.tables.table.table`` object
+
+    colname: str
+        The name of the column, for which the check is performed, since tables can
+        have multiple direction-related columns such as PHASE_DIR, REFERENCE_DIR...etc.
+
+    table_name: str, opt
+        The name of the table opened
+
+    close:
+        If True the MS will be closed
+
+    Returns
+    -------
+
+    """
+    if table_name is None:
+        logger.warning(
+            "NO 'table_name' is provided, guessing from 'table_path'!")
+
+        # If the table is an object the output string first line is the table path
+        # If not keep the string intact. The last subfolder i.e. after last / will be
+        # the table name
+        # NOTE: only works on linux systems
+
+        # TO DO: put this to separate function
+
+        table_name = str(table_path).split('\n')[0].split('/')[-1]
+
+    logger.debug(
+        "Checking direction support in table {0:s}, column {1:s}".format(
+            table_name, colname))
+
+    # Get the table in question
+    dir_table = create_MS_table_object(table_path,
+                                       is_table=True,
+                                       table_name=table_name,
+                                       readonly=True)
+
+    # Get the selected column
+    dir_col = casatables.tablecolumn(dir_table, colname)
+
+    i = 0
+    for dir_keyword in _SUPPORTED_MS_COL_DIRECTION_KEYWORDS:
+
+        # Here, I have some hard-coded knowledge of the MS structure!
+
+        if i == 0:  # QuantumUnits
+            keyword_val = dir_col.getkeyword(dir_keyword)
+
+            for du in _SUPPORTED_MS_COL_DIR_UNITS:
+                if du not in keyword_val:
+                    raise ValueError(
+                        "Not supported direction attribute {0:s} in table {1:s} column {2:s} keyword {3:s}!".format(
+                            str(du), table_name, colname, dir_keyword))
+
+        elif i == 1:  # MEASINFO
+            keyword_val = dir_col.getkeyword(
+                dir_keyword)  # This is a dictionary
+
+            if keyword_val['Ref'] not in _SUPPORTED_MS_COL_DIR_REFERENCES:
+                raise ValueError("Not supported direction attribute {0:s} in table {1:s} column {2:s} keyword {3:s}!".format(
+                    str(keyword_val['Ref']), table_name, colname, dir_keyword))
+
+        i += 1
+
+    # return 0
+
+
+def get_phase_centres_and_field_ID_list_dict_from_MS(mspath,
+                                                     field_ID_list=None,
+                                                     ant1_ID=0,
+                                                     ant2_ID=1,
+                                                     close=False):
+    """Simple function used to determine the phase centre coordinates for a given
+    list (or all) of FIELD_IDs and return a dictionary of FIELD_ID and [RA, Dec].
+    The latter is given in degrees.
+
+    Parameters
+    ----------
+    mspath: str
+        The input MS path or a ``casacore.tables.table.table`` object
+
+    field_ID_list: list of ints, opt
+        The selected `FIELD_ID`s for which the phase centre coordinates are retrieved.
+        All fields are selected if not specified
+
+    close:
+        If True the MS will be closed
+
+    ant1_ID: int, opt
+        The ID of a reference antenna used for the underlying TAQL query. This
+        parameter *should* not matter for the output, as the MAIN table has all
+        antennas associated with all scans and fields. However, in some cases,
+        when e.g. an MS is made out from multiple observations, where one is missing
+        an antenna, this parameter matters! Please be carefule na know your data
+        beforehand.
+
+    ant2_ID: int, opt
+        The ID of the second antenna defining the baseline used for the selection.
+        The same caveats as for `ref_ant_ID` applyes here.
+
+    Return
+    ------
+    phase_centres_field_IDs_dict: dict
+        The {FIELD_ID:[RA,Dec]} dictionary
+
+    """
+    MS = create_MS_table_object(mspath)
+
+    ftable_name = 'FIELD'  # Only use thr FIELD table
+
+    # Get the field IDs if not provided
+    if field_ID_list is None:
+
+        logger.debug("Getting field ID's from MS")
+
+        field_Name_ID_dict = get_fieldname_and_ID_list_dict_from_MS(
+            MS, ant1_ID=ant1_ID, ant2_ID=ant2_ID, close=False)
+
+        field_ID_list = [field_Name_ID_dict[field_name][0]
+                         for field_name in field_Name_ID_dict.keys()]
+
+        logger.debug("Field ID's from MS: {0:s}".format(
+            misc.convert_list_to_string(field_ID_list)))
+
+    # Define a dict in which, I will store the field_ID's and the coordinates
+    phase_centres_field_IDs_dict = {}
+
+    # Loop trough field IDs
+    ftable_path = get_MS_subtable_path(MS, ftable_name, close=False)
+
+    ftable = create_MS_table_object(
+        ftable_path,
+        is_table=True,
+        table_name=ftable_name,
+        readonly=True)
+
+    if ftable.rownumbers() == []:
+        raise ValueError('The table {0:s} is empty!'.format(
+            ftable_name))
+
+    for field_ID in field_ID_list:
+        if field_ID not in ftable.rownumbers():
+            raise ValueError('Invalid field ID provided!')
+
+        # Get the RA and Dec valused from the table, but first check the
+        # direction columns
+        check_dir_column_values(
+            ftable,
+            table_name=ftable_name,
+            colname='PHASE_DIR')
+
+        # Get the RA and Dec values
+        # Select the first polarisation i.e. working only for StokesI for now
+        dir_coords = ftable.getcol('PHASE_DIR')[0][field_ID]
+
+        # The dir coords should be in radians => conver to deg => convert to astropy coord
+        # phase_centre_coord = SkyCoord(misc.rad_to_deg(dir_coords[0]) * u.deg,
+        #                            misc.rad_to_deg(dir_coords[1]) * u.deg,
+        # frame='icrs') #Since only J2000 is supported currently
+
+        # Convert coords to deg
+        phase_centres_field_IDs_dict[field_ID] = [
+            misc.rad_to_deg(
+                dir_coords[0]), misc.rad_to_deg(
+                dir_coords[1])]
+
+    close_MS_table_object(ftable, is_table=True, table_name=ftable_name)
+
+    if close:
+        close_MS_table_object(MS)
+
+    return phase_centres_field_IDs_dict
 
 
 # === MAIN ===

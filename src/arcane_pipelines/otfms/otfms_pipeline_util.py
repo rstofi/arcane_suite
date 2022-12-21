@@ -406,8 +406,45 @@ def get_otfms_data_selection_from_config(config_path, split_calibrators=False):
 
                 split_timedelta = default_split_timedelta
 
+    # === position_crossmatch_threshold
+
+    # Default is to set to be 0.0025 i.e. a 9 arcseconds
+    default_time_crossmatch_threshold = float(
+        otfms_defaults._otfms_default_config_dict['DATA']['position_crossmatch_threshold'][0])
+
+    try:
+        position_crossmatch_threshold = config.getfloat(
+            'DATA',
+            'position_crossmatch_threshold',
+            fallback=default_time_crossmatch_threshold)
+        logger.debug("Set 'position_crossmatch_threshold' to {0:.4f} ...".format(
+            position_crossmatch_threshold))
+    except ValueError:
+        time_crossmatch_threshold_string = config.get(
+            'DATA', 'position_crossmatch_threshold')
+        time_crossmatch_threshold_string = pipeline.remove_comment(
+            time_crossmatch_threshold_string)
+
+        try:
+            position_crossmatch_threshold = float(
+                time_crossmatch_threshold_string.strip())
+            logger.debug("Set 'position_crossmatch_threshold' to {0:.4f} ...".format(
+                position_crossmatch_threshold))
+        except BaseException:
+            if time_crossmatch_threshold_string.strip() != '':
+                logger.warning(
+                    "Invalid format format for 'position_crossmatch_threshold' fallback to default: {0:.4f} ...".format(
+                        default_time_crossmatch_threshold))
+
+                position_crossmatch_threshold = default_time_crossmatch_threshold
+            else:
+                logger.debug("No 'position_crossmatch_threshold' is defined, fallback to default: {0:.4f} ...".format(
+                    default_time_crossmatch_threshold))
+
+                position_crossmatch_threshold = default_time_crossmatch_threshold
+
     return calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, \
-        time_crossmatch_threshold, split_timedelta
+        time_crossmatch_threshold, split_timedelta, position_crossmatch_threshold
 
 
 def get_otfms_output_variables(config_path):

@@ -258,7 +258,7 @@ def main():
     MS = ms_wrapper.create_MS_table_object(MS_path)
 
     calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, \
-        time_crossmatch_threshold, split_timedelta = \
+        time_crossmatch_threshold, split_timedelta, position_crossmatch_threshold = \
         putil.get_otfms_data_selection_from_config(args.config_file,
                                                    split_calibrators=split_calibrators)
 
@@ -440,6 +440,8 @@ def main():
             time_crossmatch_threshold))
         sconfig.write('split_timedelta:  {0:.8f}\n'.format(
             split_timedelta))
+        sconfig.write('position_crossmatch_threshold:  {0:.8f}\n'.format(
+            position_crossmatch_threshold))
         sconfig.write("casa_alias:  '{0:s}'\n".format(
             command_line_tool_alias_dict['casa_alias']))
         sconfig.write("chgcentre_alias:  '{0:s}'\n".format(
@@ -486,7 +488,7 @@ def main():
         exitcode = snakemake_proc.returncode
 
         if exitcode != 0:
-            # Snakemake puts everythin in out, and nothing to err
+            # Snakemake puts everything in out, and nothing to err
             logger.error(out)
             # logger.debug(err)
             raise ValueError(

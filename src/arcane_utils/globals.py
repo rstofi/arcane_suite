@@ -43,3 +43,8 @@ _CASA_BASE_NAME = 'casa'
 # Define the base whitespace skips for creating config files
 _PARAM_WHITESPACE_SKIP = 30
 _COMMENT_WHITESPACE_SKIP = 20
+
+# Define the keywords supported in an MS table with a direction-type column
+_SUPPORTED_MS_COL_DIRECTION_KEYWORDS = ['QuantumUnits', 'MEASINFO']
+_SUPPORTED_MS_COL_DIR_UNITS = ['rad']
+_SUPPORTED_MS_COL_DIR_REFERENCES = ['J2000']

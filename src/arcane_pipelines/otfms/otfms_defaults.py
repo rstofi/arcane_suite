@@ -29,7 +29,8 @@ _otfms_default_config_dict = {'ENV': {
     'ant1_ID': ['0', False, 'int or none'],
     'ant2_ID': ['1', False, 'int or none'],
     'time_crossmatch_threshold': ['0.001', False, 'float or none'],
-    'split_timedelta': ['0.5', False, 'float or none']},
+    'split_timedelta': ['0.5', False, 'float or none'],
+    'position_crossmatch_threshold': ['0.0025', False, 'float or none']},  # 9"
     'OUTPUT': {
     'OTF_acronym': ['OTFasp', True, 'string']
 }}

@@ -6,6 +6,8 @@ __all__ = ['convert_list_to_string']
 import sys
 import logging
 
+import numpy as np
+
 # === Set up logging
 logger = logging.getLogger(__name__)
 
@@ -34,6 +36,12 @@ def convert_list_to_string(list_to_convert):
     literal_list_string += listToStr + ']'
 
     return literal_list_string
+
+
+def rad_to_deg(x):
+    """
+    """
+    return ((x * 180) / np.pi)
 
 
 # === MAIN ===

@@ -225,7 +225,7 @@ installation under {1:s} . Please change snakemake_alias in the config file!".fo
                     'No Snakemake installation have been found on the system!')
         else:
             logger.warning(
-                "Found '{0:s}'' executable, but no 'snakemake' installation!".format(snakemake_alias))
+                "Found '{0:s}' executable, but no 'snakemake' installation!".format(snakemake_alias))
 
 
 def check_is_installed(command_line_tool_alias, pedantic=False):
