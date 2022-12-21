@@ -144,19 +144,11 @@ def main():
         default=None)
 
     parser.add_argument(
-        '-dc',
-        '--direction_check',
+        '-sdc',
+        '--skip_direction_check',
         required=False,
-        help="If given, the code checks if the MS phase centre and the direction from the name are 'close enough'",
+        help="If given, the code checks if the MS phase centre and the direction from the name are 'close enough' based on the config.yaml",
         action='store_true')
-
-    parser.add_argument(
-        '-dt',
-        '--direction_tolerance',
-        required=False,
-        help="Only works if --direction_check is set to True. The threshold defining 'close enough'",
-        type=float,
-        default=None)
 
     # ===========================================================================
     args = parser.parse_args()  # Get the arguments
@@ -193,7 +185,7 @@ def main():
         logger.info("Running *otf_pointing_correction* in 'chgcentre' " +
                     "mode with OTF_ID: {0:s}".format(args.otf_id))
     else:
-        logger = pipeline.init_logger(log_level='DEBUG')
+        logger = pipeline.init_logger()
         logger.info("Running *otf_pointing_correction* in 'renaming' " +
                     "mode with OTF_ID: {0:s}".format(args.otf_id))
 
@@ -230,9 +222,14 @@ def main():
     else:
         logger.info('Renaming field in {0:s}'.format(otf_MS_path))
 
+        otf_acronym = str(pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                                     var_name='OTF_acronym'))
+
+        logger.info("Using the acronym '{0:s}'".format(otf_acronym))
+
         # Now compute the name form the RA and Dec values
-        otf_field_name = putil.generate_OTF_names_from_ra_dec(ra=ra_centre,
-                                                              dec=dec_centre)
+        otf_field_name = putil.generate_OTF_names_from_ra_dec(
+            ra=ra_centre, dec=dec_centre, acronym=otf_acronym)
 
         logger.info('The new field name, based on the coordinates is: {0:s}'.format(
             otf_field_name))
@@ -242,21 +239,15 @@ def main():
 
         # Check if the new field name, is "close to" the actual phase centre in
         # the MS
-        if args.direction_check:
-            if args.direction_tolerance is None:
-                logger.warning("No 'direction_tolerance' is provided, fallback to default of {0:.4f}".format(
-                    float(otfms_defaults._otfms_default_config_dict['DATA']['position_crossmatch_threshold'][0])))
+        if not args.skip_direction_check:
+            dir_tol = float(
+                pipeline.get_var_from_yaml(
+                    yaml_path=yaml_path,
+                    var_name='position_crossmatch_threshold'))
 
-                dir_tol = float(
-                    otfms_defaults._otfms_default_config_dict['DATA']['position_crossmatch_threshold'][0])
-
-            else:
-                logger.info(
-                    "Checking the MS phase centre position against the renaming \
-position with {0:.4f} deg direction tolerance".format(
-                        args.direction_tolerance))
-
-                dir_tol = float(args.direction_tolerance)
+            logger.info(
+                "Checking the MS phase centre position against the renaming \
+position with {0:.4f} deg direction tolerance".format(dir_tol))
 
             # Hnadle numerics, and if threshold is set to 0
             if dir_tol == 0.:
@@ -301,6 +292,8 @@ position with {0:.4f} deg direction tolerance".format(
                                        source=True,
                                        pointing=True,
                                        close=True)
+
+        logger.info('Exit 0')
 
         sys.exit(0)
 

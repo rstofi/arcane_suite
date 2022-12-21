@@ -8,7 +8,9 @@ __all__ = [
     'get_MS_subtable_path',
     'get_fieldname_and_ID_list_dict_from_MS',
     'rename_single_field',
-    'get_time_based_on_field_names_and_scan_IDs']
+    'get_time_based_on_field_names_and_scan_IDs',
+    'check_dir_column_values',
+    'get_phase_centres_and_field_ID_list_dict_from_MS']
 
 
 import sys

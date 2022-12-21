@@ -1,6 +1,6 @@
 """Miscellaneous functions
 """
-__all__ = ['convert_list_to_string']
+__all__ = ['convert_list_to_string', 'str_to_bool', 'rad_to_deg']
 
 
 import sys
@@ -36,6 +36,40 @@ def convert_list_to_string(list_to_convert):
     literal_list_string += listToStr + ']'
 
     return literal_list_string
+
+
+def str_to_bool(bool_string):
+    """Convert a string to a boolean value. Working for the following strings:
+        - True
+        - true
+        - False
+        - false
+
+    NOTE that VAlueERROR is raised is the string is invalid
+
+    Parameters:
+    -----------
+    bool_string: str
+        The string to convert
+
+    Returns
+    -------
+    bool_val: bool
+        The boolean equivalent of the string
+
+    """
+    if bool_string == 'True':
+        bool_val = True
+    elif bool_string == 'true':
+        bool_val = True
+    elif bool_string == 'False':
+        bool_val = False
+    elif bool_string == 'false':
+        bool_val = False
+    else:
+        raise ValueError('Invalid string passed to `str_to_bool()`!')
+
+    return bool_val
 
 
 def rad_to_deg(x):

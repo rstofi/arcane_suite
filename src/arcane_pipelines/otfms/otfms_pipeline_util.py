@@ -23,6 +23,8 @@ from arcane_utils import time as a_time
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
+from arcane_utils import misc
+
 # Load pipeline default parameters
 from arcane_pipelines.otfms import otfms_defaults
 
@@ -111,7 +113,7 @@ def get_otfms_data_variables(config_path):
             split_calibrators_string).strip()
 
         try:
-            split_calibrators = pipeline.str_to_bool(split_calibrators_string)
+            split_calibrators = misc.str_to_bool(split_calibrators_string)
         except BaseException:
             logger.warning(
                 "Invalid argument given to 'split_calibrators', set it to False...")
@@ -271,49 +273,36 @@ def get_otfms_data_selection_from_config(config_path, split_calibrators=False):
         otfms_defaults._otfms_default_config_dict['DATA']['ant1_ID'][0])
 
     try:
-        ant1_ID = config.getint('DATA', 'ant1_ID', fallback=default_ant1_ID)
-        logger.debug("Set 'ant1_ID' to {0:s} ...".format(ant1_ID))
-    except ValueError:  # When there is a comment
-        ant1_ID_string = config.get('DATA', 'ant1_ID')
-        ant1_ID_string = pipeline.remove_comment(ant1_ID_string)
+        ant1_ID = pipeline.get_valued_param_from_config(
+            config_path,
+            param_section='DATA',
+            param_name='ant1_ID',
+            param_type='int',
+            param_default=default_ant1_ID)
 
-        try:
-            ant1_ID = int(ant1_ID_string.strip())
-            logger.debug("Set 'ant1_ID' to {0:d} ...".format(ant1_ID))
-        except BaseException:
-            if ant1_ID_string.strip() != '':
-                logger.warning("Invalid format for 'ant1_ID'!")
-                logger.debug(
-                    "Fallback to default and set 'ant1_ID' to {0:d} ...".format(default_ant1_ID))
-                ant1_ID = default_ant1_ID
-            else:
-                logger.debug(
-                    "No 'ant1_ID' is defined, fallback to default: {0:d} ...".format(default_ant1_ID))
-                ant1_ID = default_ant1_ID
+    except BaseException:
+        logger.debug(
+            "Cant read 'ant1_ID' from config, fallback to default: {0:d} ...".format(default_ant1_ID))
+
+        ant1_ID = default_ant1_ID
 
     # === ant2_ID
     default_ant2_ID = int(
         otfms_defaults._otfms_default_config_dict['DATA']['ant2_ID'][0])
 
     try:
-        ant2_ID = config.getint('DATA', 'ant2_ID', fallback=default_ant2_ID)
-        logger.debug("Set 'ant2_ID' to {0:s} ...".format(ant2_ID))
-    except ValueError:
-        ant2_ID_string = config.get('DATA', 'ant2_ID')
-        ant2_ID_string = pipeline.remove_comment(ant2_ID_string)
-        try:
-            ant2_ID = int(ant2_ID_string.strip())
-            logger.debug("Set 'ant2_ID' to {0:d} ...".format(ant2_ID))
-        except BaseException:
-            if ant2_ID_string.strip() != '':
-                logger.warning("Invalid format for 'ant2_ID'!")
-                logger.debug(
-                    "Fallback to default and set 'ant2_ID' to {0:d} ...".format(default_ant2_ID))
-                ant1_ID = default_ant2_ID
-            else:
-                logger.debug(
-                    "No 'ant2_ID' is defined, fallback to default: {0:d} ...".format(default_ant2_ID))
-                ant2_ID = default_ant2_ID
+        ant2_ID = pipeline.get_valued_param_from_config(
+            config_path,
+            param_section='DATA',
+            param_name='ant2_ID',
+            param_type='int',
+            param_default=default_ant2_ID)
+
+    except BaseException:
+        logger.debug(
+            "Cant read 'ant2_ID' from config, fallback to default: {0:d} ...".format(default_ant2_ID))
+
+        ant2_ID = default_ant2_ID
 
     if ant1_ID == ant2_ID:
         if ant1_ID != 0:
@@ -341,70 +330,41 @@ def get_otfms_data_selection_from_config(config_path, split_calibrators=False):
         otfms_defaults._otfms_default_config_dict['DATA']['time_crossmatch_threshold'][0])
 
     try:
-        time_crossmatch_threshold = config.getfloat(
-            'DATA',
-            'time_crossmatch_threshold',
-            fallback=default_time_crossmatch_threshold)
-        logger.debug("Set 'time_crossmatch_threshold' to {0:.4f} ...".format(
-            time_crossmatch_threshold))
-    except ValueError:
-        time_crossmatch_threshold_string = config.get(
-            'DATA', 'time_crossmatch_threshold')
-        time_crossmatch_threshold_string = pipeline.remove_comment(
-            time_crossmatch_threshold_string)
+        time_crossmatch_threshold = pipeline.get_valued_param_from_config(
+            config_path,
+            param_section='DATA',
+            param_name='time_crossmatch_threshold',
+            param_type='float',
+            param_default=default_time_crossmatch_threshold)
 
-        try:
-            time_crossmatch_threshold = float(
-                time_crossmatch_threshold_string.strip())
-            logger.debug("Set 'time_crossmatch_threshold' to {0:.4f} ...".format(
-                time_crossmatch_threshold))
-        except BaseException:
-            if time_crossmatch_threshold_string.strip() != '':
-                logger.warning(
-                    "Invalid format format for 'time_crossmatch_threshold' fallback to default: {0:.4f} ...".format(
-                        default_time_crossmatch_threshold))
+    except BaseException:
+        logger.debug(
+            "Cant read 'time_crossmatch_threshold' from config, fallback to default: {0:.4f} ...".format(
+                default_time_crossmatch_threshold))
 
-                time_crossmatch_threshold = default_time_crossmatch_threshold
-            else:
-                logger.debug("No 'time_crossmatch_threshold' is defined, fallback to default: {0:.4f} ...".format(
-                    default_time_crossmatch_threshold))
-
-                time_crossmatch_threshold = default_time_crossmatch_threshold
+        time_crossmatch_threshold = default_time_crossmatch_threshold
 
     # === split_timedelta
 
+    # Default is to set to be 0.5s so the time selection will happen within
+    # +/- 0.25 s
     default_split_timedelta = float(
         otfms_defaults._otfms_default_config_dict['DATA']['split_timedelta'][0])
 
-    # Default is to set to be 0.5s so the time selection will happen within
-    # +/- 0.25 s
     try:
-        split_timedelta = config.getfloat(
-            'DATA', 'split_timedelta', fallback=default_split_timedelta)
-        logger.debug("Set 'split_timedelta' to {0:.4f} ...".format(
-            split_timedelta))
-    except ValueError:
-        split_timedelta_string = config.get('DATA', 'split_timedelta')
-        split_timedelta_string = pipeline.remove_comment(
-            split_timedelta_string)
+        split_timedelta = pipeline.get_valued_param_from_config(
+            config_path,
+            param_section='DATA',
+            param_name='split_timedelta',
+            param_type='float',
+            param_default=default_split_timedelta)
 
-        try:
-            split_timedelta = float(split_timedelta_string.strip())
-            logger.debug("Set 'split_timedelta' to {0:.4f} ...".format(
-                split_timedelta))
+    except BaseException:
+        logger.debug(
+            "Cant read 'split_timedelta' from config, fallback to default: {0:.4f} ...".format(
+                default_split_timedelta))
 
-        except BaseException:
-            if split_timedelta_string.strip() != '':
-                logger.warning(
-                    "Invalid format format for 'split_timedelta' fallback to default: {0:.4f} ...".format(
-                        default_split_timedelta))
-
-                split_timedelta = default_split_timedelta
-            else:
-                logger.debug("No 'split_timedelta' is defined, fallback to default: {0:.4f} ...".format(
-                    default_split_timedelta))
-
-                split_timedelta = default_split_timedelta
+        split_timedelta = default_split_timedelta
 
     # === position_crossmatch_threshold
 
@@ -413,35 +373,19 @@ def get_otfms_data_selection_from_config(config_path, split_calibrators=False):
         otfms_defaults._otfms_default_config_dict['DATA']['position_crossmatch_threshold'][0])
 
     try:
-        position_crossmatch_threshold = config.getfloat(
-            'DATA',
-            'position_crossmatch_threshold',
-            fallback=default_time_crossmatch_threshold)
-        logger.debug("Set 'position_crossmatch_threshold' to {0:.4f} ...".format(
-            position_crossmatch_threshold))
-    except ValueError:
-        time_crossmatch_threshold_string = config.get(
-            'DATA', 'position_crossmatch_threshold')
-        time_crossmatch_threshold_string = pipeline.remove_comment(
-            time_crossmatch_threshold_string)
+        position_crossmatch_threshold = pipeline.get_valued_param_from_config(
+            config_path,
+            param_section='DATA',
+            param_name='position_crossmatch_threshold',
+            param_type='float',
+            param_default=default_time_crossmatch_threshold)
 
-        try:
-            position_crossmatch_threshold = float(
-                time_crossmatch_threshold_string.strip())
-            logger.debug("Set 'position_crossmatch_threshold' to {0:.4f} ...".format(
-                position_crossmatch_threshold))
-        except BaseException:
-            if time_crossmatch_threshold_string.strip() != '':
-                logger.warning(
-                    "Invalid format format for 'position_crossmatch_threshold' fallback to default: {0:.4f} ...".format(
-                        default_time_crossmatch_threshold))
+    except BaseException:
+        logger.debug(
+            "Cant read 'position_crossmatch_threshold' from config, fallback to default: {0:.4f} ...".format(
+                default_time_crossmatch_threshold))
 
-                position_crossmatch_threshold = default_time_crossmatch_threshold
-            else:
-                logger.debug("No 'position_crossmatch_threshold' is defined, fallback to default: {0:.4f} ...".format(
-                    default_time_crossmatch_threshold))
-
-                position_crossmatch_threshold = default_time_crossmatch_threshold
+        position_crossmatch_threshold = default_time_crossmatch_threshold
 
     return calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, \
         time_crossmatch_threshold, split_timedelta, position_crossmatch_threshold
@@ -465,20 +409,37 @@ def get_otfms_output_variables(config_path):
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(config_path)
 
+    # === OTF_acronym
+
     OTF_acronym = config.get('OUTPUT', 'OTF_acronym')
     OTF_acronym = pipeline.remove_comment(OTF_acronym).strip()
 
     if OTF_acronym == '':
-        #raise ValueError("Missing mandatory parameter: 'OTF_acronym'")
-        logger.warning(
-            "Missing mandatory parameter: 'OTF_acronym' fallback to default: {0:s}".format(
-                otfms_defaults._otfms_default_config_dict['OUTPUT']['OTF_acronym'][0]))
+        raise ValueError("Missing mandatory parameter: 'OTF_acronym'")
 
-        OTF_acronym = otfms_defaults._otfms_default_config_dict['OUTPUT']['OTF_acronym'][0]
+        # logger.warning(
+        #    "Missing mandatory parameter: 'OTF_acronym' fallback to default: {0:s}".format(
+        #        otfms_defaults._otfms_default_config_dict['OUTPUT']['OTF_acronym'][0]))
+        #OTF_acronym = otfms_defaults._otfms_default_config_dict['OUTPUT']['OTF_acronym'][0]
 
     logger.info("Set 'OTF_acronym' to {0:s} ...".format(OTF_acronym))
 
-    return OTF_acronym
+    # === MS_outname
+
+    MS_outname = config.get('OUTPUT', 'MS_outname')
+    MS_outname = pipeline.remove_comment(MS_outname).strip()
+
+    if MS_outname == '':
+        raise ValueError("Missing mandatory parameter: 'MS_outname'")
+
+        # logger.warning(
+        #    "Missing mandatory parameter: 'MS_outname' fallback to default: {0:s}".format(
+        #        otfms_defaults._otfms_default_config_dict['OUTPUT']['MS_outname'][0]))
+        #MS_outname = otfms_defaults._otfms_default_config_dict['OUTPUT']['MS_outname'][0]
+
+    logger.info("Set 'MS_outname' to {0:s} ...".format(MS_outname))
+
+    return OTF_acronym, MS_outname
 
 
 def get_times_from_reference_pointing_file(refrence_pointing_npz):
@@ -684,6 +645,9 @@ def generate_OTF_names_from_ra_dec(ra, dec, acronym='OTFasp'):
                                          sep="", precision=2,
                                          alwayssign=True, pad=True)
     )
+
+    # Replace the decimal point with underscore
+    name_string = name_string.replace('.', '_')
 
     return name_string
 

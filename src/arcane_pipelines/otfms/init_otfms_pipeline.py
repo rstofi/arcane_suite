@@ -394,7 +394,8 @@ def main():
     # === Configure output and garbage collection
     logger.debug('Configuring output and garbage collection...')
 
-    OTF_acronym = putil.get_otfms_output_variables(args.config_file)
+    OTF_acronym, MS_outname = putil.get_otfms_output_variables(
+        args.config_file)
 
     # === Create pipeline
     logger.info('Building Snakemake pipeline...')
@@ -436,6 +437,8 @@ def main():
             pointing_ref_path))
         sconfig.write("OTF_acronym:  '{0:s}'\n".format(
             OTF_acronym))
+        sconfig.write("MS_outname:  '{0:s}'\n".format(
+            MS_outname))
         sconfig.write('time_crossmatch_threshold:  {0:.8f}\n'.format(
             time_crossmatch_threshold))
         sconfig.write('split_timedelta:  {0:.8f}\n'.format(
@@ -499,6 +502,7 @@ def main():
 
     # === Exit
     logger.info('Pipeline created')
+    logger.info('Exit 0')
     sys.exit(0)
 
 

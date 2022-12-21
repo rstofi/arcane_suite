@@ -55,18 +55,16 @@ workdir: config['working_dir']
 WORKING_dir = config['working_dir'] #Don't need this explicitly
 MS_dir = config['MS']
 POINTING_REF_file = config['pointing_ref']
-OTF_acronym = config['OTF_acronym']
+#OTF_acronym = config['OTF_acronym']
 LOG_dir = config['log_dir']
 OUTPUT_dir = config['output_dir']
 OTF_OUTPUT_dir = config['output_otf_dir']
 YAML_path = os.path.join(WORKING_dir, 'config.yaml')
+MS_OUTPUT_NAME = config['MS_outname'] + '.ms' #Define extension here
 
 #Aliases
 CASA_alias = config['casa_alias']
 CHGCENTRE_alias = config['chgcentre_alias']
-
-#Thresholds
-POS_CROSSMATCH_THRESHOLD = config['position_crossmatch_threshold']
 
 #The field_ID_mapping is an ID to UNIX timestamp mapping
 #We use only the keys in the Snakefile, but in the actual rules the configfile is
@@ -81,7 +79,7 @@ OTF_FIELD_IDs = list(OTF_FIELD_ID_MAPPING.keys())
 rule all:
     input:
         '{0:s}/otf_field_names.dat'.format(WORKING_dir),
-        '{0:s}/final.ms'.format(OUTPUT_dir)
+        '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME)
 
 #Split the calibrator field(s) from input MS
 rule split_calibrators:
@@ -177,11 +175,9 @@ rule rename_otf_pointing:
     params:
         output_otf_dir = OTF_OUTPUT_dir,
         log_dir = LOG_dir,
-        yaml_path = YAML_path,
-        pos_crossmatch_th = POS_CROSSMATCH_THRESHOLD
+        yaml_path = YAML_path
     shell:
         'arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
-        ' -dc -dt {params.pos_crossmatch_th}' +\
         '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_renaming.log'
 
 #Merge phase-rotated OTF pointings and the calibrator(s) 
@@ -193,14 +189,14 @@ rule merge_scan_and_target:
         '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs),
         '{0:1}/calibrators.ms'.format(OUTPUT_dir)
     output:
-        directory('{0:s}/final.ms'.format(OUTPUT_dir))
+        directory('{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME))
     log:
         '{0:s}/merge_scans.log'.format(LOG_dir)
     params:
         yaml_path = YAML_path,
         log_dir = LOG_dir,
         output_dir = OUTPUT_dir,
-        output_MS = os.path.join(OUTPUT_dir,'final.ms'),
+        output_MS = os.path.join(OUTPUT_dir,MS_OUTPUT_NAME),
         casa_executable = os.path.join(OUTPUT_dir, 'merge_otf_pointings.py'),
         casa_alias = CASA_alias
     shell:

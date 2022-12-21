@@ -12,8 +12,7 @@ __all__ = [
     'add_aliases_to_config_file',
     'add_unique_defaults_to_config_file',
     'check_snakemake_installation',
-    'check_is_installed',
-    'str_to_bool']
+    'check_is_installed']
 
 import sys
 import os
@@ -27,7 +26,7 @@ import subprocess
 from shutil import which
 
 from arcane_utils.globals import _VALID_LOG_LEVELS, _SNAKEMAKE_BASE_NAME, \
-    _PARAM_WHITESPACE_SKIP, _COMMENT_WHITESPACE_SKIP
+    _PARAM_WHITESPACE_SKIP, _COMMENT_WHITESPACE_SKIP, _SUPPORTED_CONFIG_VAR_TYPES
 
 # === Set up logging
 logger = logging.getLogger(__name__)
@@ -418,6 +417,112 @@ def get_aliases_for_command_line_tools(
     return command_line_tool_alias_dict
 
 
+def get_valued_param_from_config(config_path,
+                                 param_section,
+                                 param_name,
+                                 param_type,
+                                 param_default=None):
+    """
+    """
+
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read(config_path)  # 'ConfigParser' object has no attribute 'close'
+
+    if param_type not in _SUPPORTED_CONFIG_VAR_TYPES:
+        raise ValueError(
+            'Unsupported config variable type {0:s}!'.format(param_type))
+
+    if param_default is None:
+        logger.debug(
+            "The default value for parameter '{0:s}' is set to None!",
+            format(param_name))
+
+    # Loop trough the different options for variable types
+
+    if param_type == 'int':
+
+        if not isinstance(param_default, int) and param_default is not None:
+            raise ValueError('Input default type is not int!')
+
+        try:
+            cparam = config.getint(
+                param_section, param_name,
+                fallback=param_default)
+
+            logger.debug("Set '{0:s}' to {1:d} ...".format(param_name))
+
+        except ValueError:
+            cparam_string = config.get(param_section, param_name)
+            cparam_string = remove_comment(cparam_string)
+
+            try:
+                cparam = int(cparam_string.strip())
+                logger.debug(
+                    "Set '{0:s}' to {1:d} ...".format(
+                        param_name, cparam))
+
+            except BaseException:
+                if cparam_string.strip() != '':
+                    logger.warning(
+                        "Invalid format for '{0:s}' fallback to default: {0:d} ...".format(
+                            param_name, param_default))
+
+                    cparam = param_default
+
+                else:
+                    logger.debug(
+                        "No '{0:s}' is defined, fallback to default: {0:d} ...".format(
+                            param_name, param_default))
+
+                    cparam = param_default
+
+        if cparam is not None:
+            return int(cparam)
+
+    elif param_type == 'float':
+        if not isinstance(param_default, float) and param_default is not None:
+            raise ValueError('Input default type is not float!')
+
+        try:
+            cparam = config.getfloat(
+                param_section, param_name,
+                fallback=param_default)
+
+            logger.debug("Set '{0:s}' to {1:.4f} ...".format(param_name))
+
+        except ValueError:
+            cparam_string = config.get(param_section, param_name)
+            cparam_string = remove_comment(cparam_string)
+
+            try:
+                cparam = float(cparam_string.strip())
+                logger.debug(
+                    "Set '{0:s}' to {1:.4f} ...".format(
+                        param_name, cparam))
+
+            except BaseException:
+                if cparam_string.strip() != '':
+                    logger.warning(
+                        "Invalid format for '{0:s}' fallback to default: {0:.4f} ...".format(
+                            param_name, param_default))
+
+                    cparam = param_default
+
+                else:
+                    logger.debug(
+                        "No '{0:s}' is defined, fallback to default: {0:.4f} ...".format(
+                            param_name, param_default))
+
+                    cparam = param_default
+
+        if cparam is not None:
+            return float(cparam)
+
+    cparam = param_default
+
+    return cparam  # Return None
+
+
 def init_empty_config_file_with_common_ENV_variables(template_path,
                                                      pipeline_name,
                                                      overwrite=True):
@@ -633,40 +738,6 @@ def get_var_from_yaml(yaml_path, var_name):
                 'Error while parsing the yaml file: {0:s}'.format(e))
 
     return yaml_dict[var_name]
-
-
-def str_to_bool(bool_string):
-    """Convert a string to a boolean value. Working for the following strings:
-        - True
-        - true
-        - False
-        - false
-
-    NOTE that VAlueERROR is raised is the string is invalid
-
-    Parameters:
-    -----------
-    bool_string: str
-        The string to convert
-
-    Returns
-    -------
-    bool_val: bool
-        The boolean equivalent of the string
-
-    """
-    if bool_string == 'True':
-        bool_val = True
-    elif bool_string == 'true':
-        bool_val = True
-    elif bool_string == 'False':
-        bool_val = False
-    elif bool_string == 'false':
-        bool_val = False
-    else:
-        raise ValueError('Invalid string passed to `str_to_bool()`!')
-
-    return bool_val
 
 
 # === MAIN ===

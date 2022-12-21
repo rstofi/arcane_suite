@@ -126,6 +126,8 @@ def main():
             logger.info(
                 'Casa executable sript created, please run it externally')
 
+            logger.info("Exit 0")
+
             sys.exit(0)
 
     # === Attempting to run casa via subprocess
@@ -169,6 +171,8 @@ def main():
             logger.info('Output MS found')
         else:
             logger.warning('No output MS found!')
+
+    logger.info("Exit 0")
 
     sys.exit(0)
 

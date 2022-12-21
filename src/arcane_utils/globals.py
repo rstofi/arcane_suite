@@ -40,6 +40,9 @@ _PYTHON_BASE_NAME = 'python'
 _SNAKEMAKE_BASE_NAME = 'snakemake'
 _CASA_BASE_NAME = 'casa'
 
+# Define the supported variable types for automated reading
+_SUPPORTED_CONFIG_VAR_TYPES = ['int', 'float']
+
 # Define the base whitespace skips for creating config files
 _PARAM_WHITESPACE_SKIP = 30
 _COMMENT_WHITESPACE_SKIP = 20
