@@ -104,6 +104,9 @@ Automated data inspection and analysis
 Documentation and testing
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+I aim to use `semantic versioning <https://semver.org/>`_ to indicate the backwards compatibility and functionality. I plan to have release notes for major releases.
+
+
 
 Library structure
 -----------------
