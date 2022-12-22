@@ -1,0 +1,5 @@
+autopep>=1.7.0
+numpy>=1.22.0
+scipy>=1.7.1
+astropy>=5.0
+python-casacore>=3.4.0
