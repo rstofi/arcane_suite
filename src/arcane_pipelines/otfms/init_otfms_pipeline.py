@@ -79,12 +79,15 @@ def main():
     optional -ol or --overwrite-lock
         Bool, if enabled, the working directory is locked and only created if not existing
 
-    optional -cd or --skip_dependencies_check:
+    optional -sdc or --skip_dependencies_check:
         Bool, if enabled, the code skip the checks for the dependent packages (casa, chagcentre)
 
-    optional -cs or skip_snakemake_check:
+    optional -ssc or skip_snakemake_check:
         Bool, if enabled, the code skip checking for Snakemake and not performing the dry run
 
+    optional -vd or --verbosity_debug
+        Bool, if enabled, the log level is set to DEBUG
+    
     """
     # === Set arguments
     # parser = argparse.ArgumentParser(description='Initialize the pipeline for converting \
@@ -248,7 +251,18 @@ def main():
         'Snakefile')
 
     if not os.path.exists(snakefile_path):
-        raise FileNotFoundError('Corrupted installation: Snakefile not found')
+        logger.debug("No Snakefile, found, try to import 'arcane_pipelines.otfms'")
+
+        from arcane_pipelines import otfms
+
+        snakefile_path = os.path.join(
+        os.path.dirname(
+            sys.modules['arcane_pipelines.otfms'].__file__),
+        'Snakefile')
+
+        if not os.path.exists(snakefile_path):
+
+            raise FileNotFoundError('Corrupted installation: Snakefile not found')
 
     output_snakefile_path = os.path.join(working_dir, 'Snakefile')
 
