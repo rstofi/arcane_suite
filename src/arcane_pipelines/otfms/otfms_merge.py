@@ -64,10 +64,10 @@ def main():
     yaml_path = args.config_file
 
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                                var_name='output_otf_dir')
+                                                var_name='otf_blob_dir')
 
     output_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                            var_name='output_dir')
+                                            var_name='blob_dir')
 
     # Get the output MS path and executable path
     output_MS = os.path.join(output_dir, '{0:s}'.format(args.output_ms_name))

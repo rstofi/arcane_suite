@@ -191,7 +191,7 @@ def main():
 
     # Check if OTF directories exists or not
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                                var_name='output_otf_dir')
+                                                var_name='otf_blob_dir')
 
     # Compute the OTF pointing MS name based on the naming convenction
     otf_MS_path = os.path.join(

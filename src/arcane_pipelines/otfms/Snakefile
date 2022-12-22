@@ -6,7 +6,8 @@ than calling task from some library.
 
 For more info on the individual rules, see the correspondig python scripts!
 
-The arcane_otfms pipleine builds the following file structure:
+The arcane_otfms pipleine builds the following file structure (with the pipeline
+output also shown):
 
     working_dir/
     |
@@ -14,17 +15,23 @@ The arcane_otfms pipleine builds the following file structure:
     |
     -- config.yaml #Created at pipeline initialisation
     |
+    -- results/ #The main results from the pipeline goes here
+    |   |
+    |    -- final.ms #The OTF format MS => this one is created here
+    |   |
+    |    -- otf_field_names.dat #The file containing the OTF indices and field names
+    |
     -- logs/
     |   |
     |    -- log files from all rules
     |
-    -- results/
+    -- reports/
     |   |
-    |   -- final.ms #The OTF format MS
+    |   -- analytics plots
+    |
+    -- blob/ #This directory might be entirely purged at the end of the pipeline completion
     |   |
-    |   -- calibrators.ms #The claibrators
-    |   |
-    |   -- otf_field_names.dat #The OTF ID's and the corresponding names
+    |   -- calibrators.ms #The claibrators if the split is enabled
     |   |
     |   -- otf_pointings/ #All the single OTF pointings
     |       |
@@ -57,8 +64,10 @@ MS_dir = config['MS']
 POINTING_REF_file = config['pointing_ref']
 #OTF_acronym = config['OTF_acronym']
 LOG_dir = config['log_dir']
+REPORTS_dir = config['reports_dir']
+BLOB_dir = config['blob_dir']
 OUTPUT_dir = config['output_dir']
-OTF_OUTPUT_dir = config['output_otf_dir']
+OTF_BLOB_dir = config['otf_blob_dir']
 YAML_path = os.path.join(WORKING_dir, 'config.yaml')
 MS_OUTPUT_NAME = config['MS_outname'] + '.ms' #Define extension here
 
@@ -78,7 +87,7 @@ OTF_FIELD_IDs = list(OTF_FIELD_ID_MAPPING.keys())
 #=== Rules ===
 rule all:
     input:
-        '{0:s}/otf_field_names.dat'.format(WORKING_dir),
+        '{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
         '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME)
 
 #Split the calibrator field(s) from input MS
@@ -86,28 +95,28 @@ rule split_calibrators:
     input:
         '{0:s}'.format(MS_dir)
     output:
-        directory('{0:s}/calibrators.ms'.format(OUTPUT_dir))
+        directory('{0:s}/calibrators.ms'.format(BLOB_dir))
     log:
         '{0:s}/split_calibrators.log'.format(LOG_dir)
     params:
-        output_dir = OUTPUT_dir,
+        blob_dir = BLOB_dir,
         log_dir = LOG_dir
     shell:
-        'mkdir {params.output_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
+        'mkdir {params.blob_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
 
 #List the new OTF pointing names
 rule list_new_otf_field_names:
     input:
         '{0:s}'.format(YAML_path)
     output:
-        '{0:s}/otf_field_names.dat'.format(WORKING_dir)
+        '{0:s}/otf_field_names.dat'.format(OUTPUT_dir)
     log:
         '{0:s}'.format(LOG_dir) +\
         '/list_new_otf_field_names.log'
     params:
         log_dir = LOG_dir,
         yaml_path = YAML_path,
-        output_fname = '{0:s}/otf_field_names.dat'.format(WORKING_dir)
+        output_fname = '{0:s}/otf_field_names.dat'.format(OUTPUT_dir)
     shell:
         'arcane_otfms_otf_pointing_correction -c {params.yaml_path} -sn -o {params.output_fname} ' +\
         '> {params.log_dir}/list_new_otf_field_names.log'
@@ -118,16 +127,16 @@ rule split_otf_scans_by_pointing:
         '{0:s}'.format(MS_dir),
         '{0:s}'.format(POINTING_REF_file)
     output:
-        directory('{0:s}'.format(OTF_OUTPUT_dir) +\
+        directory('{0:s}'.format(OTF_BLOB_dir) +\
                 '/otf_pointing_no_{field_ID}.ms')
     log:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_split.log'
     params:
-        output_otf_dir = OTF_OUTPUT_dir,
+        #otf_blob_dir = OTF_BLOB_dir,
         log_dir = LOG_dir,
         yaml_path = YAML_path,
-        casa_executable = os.path.join(OTF_OUTPUT_dir, 'split_otf_pointing_no_{field_ID}.py'),
+        casa_executable = os.path.join(OTF_BLOB_dir, 'split_otf_pointing_no_{field_ID}.py'),
         casa_alias = CASA_alias
     shell:
         'arcane_otfms_split -c {params.yaml_path} -i {wildcards.field_ID} ' +\
@@ -140,14 +149,14 @@ rule split_otf_scans_by_pointing:
 #Apply the phase rotation on the single pointing
 rule apply_phase_rotation:
     input:
-        '{0:s}'.format(OTF_OUTPUT_dir) +\
+        '{0:s}'.format(OTF_BLOB_dir) +\
         '/otf_pointing_no_{field_ID}.ms',
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_split.log'
     output:
         #Leave empty as snakemake overwrite directories
     params:
-        output_otf_dir = OTF_OUTPUT_dir,
+        otf_blob_dir = OTF_BLOB_dir,
         log_dir = LOG_dir,
         yaml_path = YAML_path,
         chgcentre_alias = CHGCENTRE_alias
@@ -155,7 +164,7 @@ rule apply_phase_rotation:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_chgcentre.log'
     shell:
-        '{params.chgcentre_alias} {params.output_otf_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
+        '{params.chgcentre_alias} {params.otf_blob_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
         '$(arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '-ds -l {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log) ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log 2>&1'
@@ -173,7 +182,7 @@ rule rename_otf_pointing:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_renaming.log'
     params:
-        output_otf_dir = OTF_OUTPUT_dir,
+        #otf_blob_dir = OTF_BLOB_dir,
         log_dir = LOG_dir,
         yaml_path = YAML_path
     shell:
@@ -185,9 +194,9 @@ rule merge_scan_and_target:
     input:
         expand('{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_renaming.log', field_ID=OTF_FIELD_IDs),
-        expand('{0:s}'.format(OTF_OUTPUT_dir) +\
+        expand('{0:s}'.format(OTF_BLOB_dir) +\
         '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs),
-        '{0:1}/calibrators.ms'.format(OUTPUT_dir)
+        '{0:1}/calibrators.ms'.format(BLOB_dir)
     output:
         directory('{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME))
     log:
@@ -195,9 +204,10 @@ rule merge_scan_and_target:
     params:
         yaml_path = YAML_path,
         log_dir = LOG_dir,
-        output_dir = OUTPUT_dir,
+        #working_dir = WORKING_dir,
+        #output_dir = OUTPUT_dir,
         output_MS = os.path.join(OUTPUT_dir,MS_OUTPUT_NAME),
-        casa_executable = os.path.join(OUTPUT_dir, 'merge_otf_pointings.py'),
+        casa_executable = os.path.join(BLOB_dir, 'merge_otf_pointings.py'),
         casa_alias = CASA_alias
     shell:
         'arcane_otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\

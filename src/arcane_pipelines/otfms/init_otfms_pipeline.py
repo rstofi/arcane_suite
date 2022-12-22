@@ -251,18 +251,7 @@ def main():
         'Snakefile')
 
     if not os.path.exists(snakefile_path):
-        logger.debug("No Snakefile, found, try to import 'arcane_pipelines.otfms'")
-
-        from arcane_pipelines import otfms
-
-        snakefile_path = os.path.join(
-        os.path.dirname(
-            sys.modules['arcane_pipelines.otfms'].__file__),
-        'Snakefile')
-
-        if not os.path.exists(snakefile_path):
-
-            raise FileNotFoundError('Corrupted installation: Snakefile not found')
+        raise FileNotFoundError('Corrupted installation: Snakefile not found')
 
     output_snakefile_path = os.path.join(working_dir, 'Snakefile')
 
@@ -436,15 +425,19 @@ def main():
             working_dir))
         sconfig.write('output_dir:\n  {0:s}\n'.format(
             os.path.join(working_dir, 'results')))
+        sconfig.write('blob_dir:\n  {0:s}\n'.format(
+            os.path.join(working_dir, 'blob')))
         sconfig.write(
-            'output_otf_dir:\n  {0:s}\n'.format(
+            'otf_blob_dir:\n  {0:s}\n'.format(
                 os.path.join(
                     os.path.join(
                         working_dir,
-                        'results'),
+                        'blob'),
                     'otf_pointings')))
         sconfig.write('log_dir:\n  {0:s}\n'.format(
             os.path.join(working_dir, 'logs')))
+        sconfig.write('reports_dir:\n  {0:s}\n'.format(
+            os.path.join(working_dir, 'reports')))
         sconfig.write('MS:\n  {0:s}\n'.format(
             MS_path))
         sconfig.write('pointing_ref:\n  {0:s}\n'.format(

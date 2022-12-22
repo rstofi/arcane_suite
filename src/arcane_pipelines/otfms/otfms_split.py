@@ -92,7 +92,7 @@ def main():
                                     var_name='MS')
 
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                                var_name='output_otf_dir')
+                                                var_name='otf_blob_dir')
 
     split_timedelta = pipeline.get_var_from_yaml(yaml_path=yaml_path,
                                                  var_name='split_timedelta')
