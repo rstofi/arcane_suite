@@ -27,6 +27,8 @@ output also shown):
     |
     -- reports/
     |   |
+    |   -- DAG of the graph (created during building phase)
+    |   |
     |   -- analytics plots
     |
     -- blob/ #This directory might be entirely purged at the end of the pipeline completion
@@ -90,19 +92,80 @@ rule all:
         '{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
         '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME)
 
+#=== Calibrator fields are split from the MS
 #Split the calibrator field(s) from input MS
-rule split_calibrators:
-    input:
-        '{0:s}'.format(MS_dir)
-    output:
-        directory('{0:s}/calibrators.ms'.format(BLOB_dir))
-    log:
-        '{0:s}/split_calibrators.log'.format(LOG_dir)
-    params:
-        blob_dir = BLOB_dir,
-        log_dir = LOG_dir
-    shell:
-        'mkdir {params.blob_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
+if bool(config['split_calibrators']):
+    rule split_calibrators:
+        input:
+            '{0:s}'.format(MS_dir)
+        output:
+            directory('{0:s}/calibrators.ms'.format(BLOB_dir))
+        log:
+            '{0:s}/split_calibrators.log'.format(LOG_dir)
+        params:
+            blob_dir = BLOB_dir,
+            log_dir = LOG_dir
+        shell:
+            'mkdir {params.blob_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
+
+
+    #Merge phase-rotated OTF pointings and the calibrator(s) 
+    rule merge_otf_pointings_and_calibrators:
+        input:
+            expand('{0:s}'.format(LOG_dir) +\
+            '/otf_pointing_no_{field_ID}_renaming.log', field_ID=OTF_FIELD_IDs),
+            expand('{0:s}'.format(OTF_BLOB_dir) +\
+            '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs),
+            '{0:1}/calibrators.ms'.format(BLOB_dir)
+        output:
+            directory('{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME))
+        log:
+            '{0:s}/merge_scans.log'.format(LOG_dir)
+        params:
+            yaml_path = YAML_path,
+            log_dir = LOG_dir,
+            #working_dir = WORKING_dir,
+            #output_dir = OUTPUT_dir,
+            output_MS = os.path.join(OUTPUT_dir,MS_OUTPUT_NAME),
+            casa_executable = os.path.join(BLOB_dir, 'merge_otf_pointings.py'),
+            casa_alias = CASA_alias
+        shell:
+            'arcane_otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\
+            '> {params.log_dir}/merge_scans.log ; ' +\
+            '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
+            '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
+            'arcane_otfms_merge -p -c {params.yaml_path} -o {params.output_MS} ' +\
+            '>> {params.log_dir}/merge_scans.log '
+
+#=== NO calibrator fields are split from the input MS
+else:
+    #Merge phase-rotated OTF pointings and the calibrator(s) 
+    rule merge_otf_pointings:
+        input:
+            expand('{0:s}'.format(LOG_dir) +\
+            '/otf_pointing_no_{field_ID}_renaming.log', field_ID=OTF_FIELD_IDs),
+            expand('{0:s}'.format(OTF_BLOB_dir) +\
+            '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs)
+        output:
+            directory('{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME))
+        log:
+            '{0:s}/merge_scans.log'.format(LOG_dir)
+        params:
+            yaml_path = YAML_path,
+            log_dir = LOG_dir,
+            #working_dir = WORKING_dir,
+            #output_dir = OUTPUT_dir,
+            output_MS = os.path.join(OUTPUT_dir,MS_OUTPUT_NAME),
+            casa_executable = os.path.join(BLOB_dir, 'merge_otf_pointings.py'),
+            casa_alias = CASA_alias
+        shell:
+            'arcane_otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\
+            '> {params.log_dir}/merge_scans.log ; ' +\
+            '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
+            '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
+            'arcane_otfms_merge -p -c {params.yaml_path} -o {params.output_MS} ' +\
+            '>> {params.log_dir}/merge_scans.log '
+
 
 #List the new OTF pointing names
 rule list_new_otf_field_names:
@@ -172,7 +235,7 @@ rule apply_phase_rotation:
 
 #Rename the pointing field so later imaging processes can access it as a separate field
 #IAU specifications: http://cdsweb.u-strasbg.fr/Dic/iau-spec.html
-rule rename_otf_pointing:
+rule rename_otf_pointings:
     input:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_chgcentre.log'
@@ -189,33 +252,7 @@ rule rename_otf_pointing:
         'arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_renaming.log'
 
-#Merge phase-rotated OTF pointings and the calibrator(s) 
-rule merge_scan_and_target:
-    input:
-        expand('{0:s}'.format(LOG_dir) +\
-        '/otf_pointing_no_{field_ID}_renaming.log', field_ID=OTF_FIELD_IDs),
-        expand('{0:s}'.format(OTF_BLOB_dir) +\
-        '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs),
-        '{0:1}/calibrators.ms'.format(BLOB_dir)
-    output:
-        directory('{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME))
-    log:
-        '{0:s}/merge_scans.log'.format(LOG_dir)
-    params:
-        yaml_path = YAML_path,
-        log_dir = LOG_dir,
-        #working_dir = WORKING_dir,
-        #output_dir = OUTPUT_dir,
-        output_MS = os.path.join(OUTPUT_dir,MS_OUTPUT_NAME),
-        casa_executable = os.path.join(BLOB_dir, 'merge_otf_pointings.py'),
-        casa_alias = CASA_alias
-    shell:
-        'arcane_otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\
-        '> {params.log_dir}/merge_scans.log ; ' +\
-        '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
-        '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
-        'arcane_otfms_merge -p -c {params.yaml_path} -o {params.output_MS} ' +\
-        '>> {params.log_dir}/merge_scans.log '
+
 
 #TO DO: add this rule at the end of the pipeline
 #Purge all casa leftover files: the .last files

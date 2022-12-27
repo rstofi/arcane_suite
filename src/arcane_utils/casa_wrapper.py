@@ -14,7 +14,6 @@ from arcane_utils import pipeline
 
 from arcane_utils.globals import _CASA_BASE_NAME
 
-
 # === Set up logging
 logger = logging.getLogger(__name__)
 

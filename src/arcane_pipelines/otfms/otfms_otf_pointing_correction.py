@@ -20,10 +20,9 @@ from arcane_pipelines.otfms import otfms_defaults
 # === Set logging
 #logger = pipeline.init_logger()
 
-# NOTE: for this app the log handler type dpends on the input parameters!
+# NOTE: for this app the log handler type depends on the input parameters!
 
 # === Functions ===
-
 
 def save_names_only(yaml_path, output_fname):
     """Wrapper function for the secondary purpose of the tool: generating the names
@@ -160,7 +159,7 @@ def main():
     if args.save_names_only:
         logger = pipeline.init_logger()
 
-        logger.info("Running *otf_pointing_correction* in 'listing' mode")
+        logger.info("Running *otfms_otf_pointing_correction* in 'listing' mode")
 
         if args.output_fname is None:
             raise ValueError('No output file name is provided!')

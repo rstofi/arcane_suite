@@ -729,6 +729,9 @@ def get_phase_centres_and_field_ID_list_dict_from_MS(mspath,
         raise ValueError('The table {0:s} is empty!'.format(
             ftable_name))
 
+    elif len(ftable.rownumbers()) < len(field_ID_list):
+        raise ValueError("Unexpected error happened while retrieving the Field ID's: more ID's than rows have been found!")
+
     for field_ID in field_ID_list:
         if field_ID not in ftable.rownumbers():
             raise ValueError('Invalid field ID provided!')
@@ -742,7 +745,7 @@ def get_phase_centres_and_field_ID_list_dict_from_MS(mspath,
 
         # Get the RA and Dec values
         # Select the first polarisation i.e. working only for StokesI for now
-        dir_coords = ftable.getcol('PHASE_DIR')[0][field_ID]
+        dir_coords = ftable.getcol('PHASE_DIR')[field_ID][0]
 
         # The dir coords should be in radians => conver to deg => convert to astropy coord
         # phase_centre_coord = SkyCoord(misc.rad_to_deg(dir_coords[0]) * u.deg,

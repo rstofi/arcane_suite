@@ -145,6 +145,13 @@ def main():
         help='If enabled, the log level is set to DEBUG',
         action='store_true')
 
+    parser.add_argument(
+        '-sgc',
+        '--skip_rule_graph_creation',
+        required=False,
+        help='If enabled, the rule graph is not generated',
+        action='store_true')
+
     # ===========================================================================
     args = parser.parse_args()  # Get the arguments
 
@@ -506,6 +513,32 @@ def main():
 
     else:
         logger.warning('Skipping dry run')  # Maybe this should be CRITICAL (?)
+
+
+    # === Create a DAG of the graph logic under `working_dir/reports/`
+
+    if not args.skip_rule_graph_creation:
+
+        logger.info("Creating workflow rule graph...")
+
+        #Create results/ directory
+        reports_dir = os.path.join(working_dir,'reports')
+
+        if not os.path.exists(reports_dir):
+            os.mkdir(reports_dir)
+        else:
+            logger.debug('reports/ dir already exist, skipping creating it...')
+
+        rule_graph_creating_process = subprocess.run(
+            'cd {0:s}; {1:s} --rulegraph | dot -Tpng > {2:s}/rule_graph.png'.format(
+                working_dir, command_line_tool_alias_dict['snakemake_alias'],reports_dir),
+                shell=True, capture_output=True)
+
+        out, err = rule_graph_creating_process.stdout, rule_graph_creating_process.stderr
+        exitcode = rule_graph_creating_process.returncode
+
+        if exitcode != 0:
+            logger.warning("Unexpected error in rulegraph creation (probably `dot` is not installed)!")
 
     # === Exit
     logger.info('Pipeline created')

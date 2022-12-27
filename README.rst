@@ -16,7 +16,7 @@ Usage and contribution
 
 ``arcane_suite`` is primarily developed for personal use, except for *some* pipelines, which are developed for collaborations. Nonetheless, the code is open-source and open-acces for anyone to use, including the various modules, tools and of course the pipelines.
 
-Contribution of any form is more than welcome and I aim to fix any bugs as quckly as possible. See the see the `design & philosophy <https://github.com/rstofi/arcane_suite/blob/main/Documentation/Design_and_Philosophy.rst>`_ page for more info.
+Contribution of any form is more than welcome and I aim to fix any bugs as quckly as possible. See the see the `design & philosophy <https://github.com/rstofi/arcane_suite/blob/main/Documentation/Design_and_Philosophy.rst>`_ page for more info. For the upcoming bug fixes and features planned, see the `backlog <https://github.com/rstofi/arcane_suite/blob/main/Documentation/Backlog.rst>`_ page.
 
 
 Documentation and testing
