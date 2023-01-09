@@ -730,7 +730,8 @@ def get_phase_centres_and_field_ID_list_dict_from_MS(mspath,
             ftable_name))
 
     elif len(ftable.rownumbers()) < len(field_ID_list):
-        raise ValueError("Unexpected error happened while retrieving the Field ID's: more ID's than rows have been found!")
+        raise ValueError(
+            "Unexpected error happened while retrieving the Field ID's: more ID's than rows have been found!")
 
     for field_ID in field_ID_list:
         if field_ID not in ftable.rownumbers():

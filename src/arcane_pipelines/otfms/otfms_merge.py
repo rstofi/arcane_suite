@@ -34,14 +34,6 @@ def main():
         type=str)
 
     parser.add_argument(
-        '-o',
-        '--output_ms_name',
-        required=True,
-        help='The name of the output MS, with the .ms extension but without the absolute path',
-        action='store',
-        type=str)
-
-    parser.add_argument(
         '-fr',
         '--full_rule_run',
         required=False,
@@ -66,13 +58,21 @@ def main():
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
                                                 var_name='otf_blob_dir')
 
+    blob_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                          var_name='blob_dir')
+
     output_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                            var_name='blob_dir')
+                                            var_name='output_dir')
+
+    output_ms_name = pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                                var_name='MS_outname') +\
+        '.ms'
 
     # Get the output MS path and executable path
-    output_MS = os.path.join(output_dir, '{0:s}'.format(args.output_ms_name))
+    # Generated from input yaml
+    output_MS = os.path.join(output_dir, output_ms_name)
 
-    casa_executable_path = os.path.join(output_dir,
+    casa_executable_path = os.path.join(blob_dir,
                                         'merge_otf_pointings.py')
 
     # === Create executable

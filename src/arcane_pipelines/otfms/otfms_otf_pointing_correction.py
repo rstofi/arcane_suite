@@ -24,6 +24,7 @@ from arcane_pipelines.otfms import otfms_defaults
 
 # === Functions ===
 
+
 def save_names_only(yaml_path, output_fname):
     """Wrapper function for the secondary purpose of the tool: generating the names
 

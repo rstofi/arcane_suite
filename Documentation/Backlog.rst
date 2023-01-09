@@ -9,8 +9,10 @@ Ongoing stories
 Parts of the (sometimes unfinished) code, I am currently working.
 
     - finish the function(s):
-    - finish the app(s): ``otfms_pointing_diagnostics``
-    - write documentation for: ``create_field_ID_RA_Dec_plot``
+    - finish the app(s):
+    - write documentation for: 
+    - check bugs for: ``otfms_pointing_diagnostics``
+    - add to Snakemake workflow: ``otfms_pointing_diagnostics``
 
 Known bugs/issues
 -----------------
@@ -32,6 +34,7 @@ My goals for a minor version update.
     - add a rule to clean up the intermediate files in ``otfms``
     - finish the `design & philosophy <https://github.com/rstofi/arcane_suite/blob/main/Documentation/Design_and_Philosophy.rst>`_ page
     - add documentation for the ``otfms`` pipeline
+    - factorize the tasks(i.e. from the code add to casa_wrapper): ``run_:casa_executable``, ``create_casa_merge_executable`` + same for split and add listobs a s an option to both
 
 
 Long-term goals

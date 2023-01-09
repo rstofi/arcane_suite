@@ -126,15 +126,14 @@ if bool(config['split_calibrators']):
             log_dir = LOG_dir,
             #working_dir = WORKING_dir,
             #output_dir = OUTPUT_dir,
-            output_MS = os.path.join(OUTPUT_dir,MS_OUTPUT_NAME),
             casa_executable = os.path.join(BLOB_dir, 'merge_otf_pointings.py'),
             casa_alias = CASA_alias
         shell:
-            'arcane_otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\
+            'arcane_otfms_merge -c {params.yaml_path} ' +\
             '> {params.log_dir}/merge_scans.log ; ' +\
             '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
             '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
-            'arcane_otfms_merge -p -c {params.yaml_path} -o {params.output_MS} ' +\
+            'arcane_otfms_merge -p -c {params.yaml_path} ' +\
             '>> {params.log_dir}/merge_scans.log '
 
 #=== NO calibrator fields are split from the input MS
@@ -155,15 +154,14 @@ else:
             log_dir = LOG_dir,
             #working_dir = WORKING_dir,
             #output_dir = OUTPUT_dir,
-            output_MS = os.path.join(OUTPUT_dir,MS_OUTPUT_NAME),
             casa_executable = os.path.join(BLOB_dir, 'merge_otf_pointings.py'),
             casa_alias = CASA_alias
         shell:
-            'arcane_otfms_merge -c {params.yaml_path} -o {params.output_MS} ' +\
+            'arcane_otfms_merge -c {params.yaml_path} ' +\
             '> {params.log_dir}/merge_scans.log ; ' +\
             '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
             '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
-            'arcane_otfms_merge -p -c {params.yaml_path} -o {params.output_MS} ' +\
+            'arcane_otfms_merge -p -c {params.yaml_path} ' +\
             '>> {params.log_dir}/merge_scans.log '
 
 
