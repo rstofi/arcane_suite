@@ -5,6 +5,9 @@ and after the phase rotation. Used in the following rules:
 import sys
 import os
 import argparse
+import logging
+
+import numpy as np
 
 from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
@@ -14,6 +17,8 @@ from arcane_utils import misc as pmisc
 
 # === Set logging
 logger = pipeline.init_logger()
+
+logger.setLevel(logging.DEBUG)
 
 # === Functions ===
 
@@ -35,8 +40,7 @@ def main():
     MS, which lives under /results and it's name is derived from ``MS_outname``.
 
     If the input ``-o`` parameter results in a file already exists and the code is
-    running in 'output' mode, the created file name will start with
-    ``after_otf_correction_``
+    throwing a warning
 
     Parameters:
     - '-c' or '--config_file' (required, str): Snakemake yaml configuration file for the otfms pipeline
@@ -110,7 +114,13 @@ def main():
     logger.debug(
         "The MS used for the diagnostics plots: {0:s} ...".format(input_ms_path))
 
+    # Get the field ID and field name diect
+
+    field_name_and_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(
+        mspath=input_ms_path, scan_ID=False, close=True)
+
     # === Generate diagnostics plots for the calibrator fields:
+    # Should be the same routine for both the 'input' and 'output' mode
     if bool(
         pipeline.get_var_from_yaml(
             yaml_path=yaml_path,
@@ -126,7 +136,24 @@ def main():
             list_of_calibrator_fields = []
 
         else:
-            logger.debug("Calibrator field(s) selected: {0:s}".format(
+            # Now check if the calibrator fields are ALL in the MS!
+
+            calibrator_field_ID_list = []
+
+            for field_Name in list_of_calibrator_fields:
+                if field_Name not in field_name_and_ID_dict.keys():
+                    raise ValueError(
+                        "The calibrator field {0:s} is not in the input MS!".format(field_Name))
+
+                else:
+                    calibrator_field_ID_list.append(
+                        field_name_and_ID_dict[field_Name][0])
+
+                    if np.size(field_name_and_ID_dict[field_Name]) > 1:
+                        logger.critical(
+                            "Target field {0:s} has more than 1 associated field ID's, using only the first!".format(field_Name))
+
+            logger.info("Calibrator field(s) selected: {0:s}".format(
                 pmisc.convert_list_to_string(list_of_calibrator_fields)))
 
             output_fname = "calibrator_" + args.output_fname
@@ -135,28 +162,64 @@ def main():
 
             if args.output_mode:
                 if os.path.exists(outname_path):
-
                     logger.warn(
-                        "Using alternate name as diagnostic plot already exis under: {0:s} ".format(outname_path))
-
-                    outname_path = os.path.join(
-                        reports_dir_path, 'after_otf_correction_' + output_fname)
+                        "Diagnostic plot already exis under: {0:s} ".format(outname_path))
 
             logger.info(
-                "Generating diagnostics plot for calibrator fields under: {0:s} ...".format(outname_path))
+                "Generating diagnostics plot for calibrator fields under: {0:s} ".format(outname_path))
 
             visual_diagnostics.create_field_ID_RA_Dec_plot(
                 mspath=input_ms_path,
                 otf_fig_path=outname_path,
-                field_ID_list=list_of_calibrator_fields,
+                field_ID_list=calibrator_field_ID_list,
                 ptitle=ptitle)
 
     # === Select field ID's to plot based on the MS:
-    list_of_target_fields = pipeline.get_var_from_yaml(
-        yaml_path=yaml_path, var_name='target_fields')
+    # The field names should be different for the 'input' and 'output' mode
+    if not args.output_mode:
+        list_of_target_fields = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='target_fields')
+
+    else:
+        # Get the list of traget fields from the ``otf_field_names.dat`` file
+
+        output_dir = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='output_dir')
+
+        list_of_target_fields = list(
+            np.loadtxt(
+                os.path.join(
+                    output_dir,
+                    'otf_field_names.dat'),
+                dtype=str,
+                skiprows=1,
+                comments='#',
+                usecols=1).flatten())
+
+       #logger.info(list_of_target_fields, np.shape(list_of_target_fields))
+
+        #list_of_target_fields = []
+
+    # Now check if the calibrator fields are ALL in the MS!
+    target_field_ID_list = []
+
+    for field_Name in list_of_target_fields:
+        if field_Name not in field_name_and_ID_dict.keys():
+            raise ValueError(
+                "The target field {0:s} is not in the input MS!".format(field_Name))
+
+        else:
+            target_field_ID_list.append(field_name_and_ID_dict[field_Name][0])
+
+            if np.size(field_name_and_ID_dict[field_Name]) > 1:
+                logger.critical(
+                    "Target field {0:s} has more than 1 associated field ID's, using only the first!".format(field_Name))
+
+    logger.info("Target field(s) selected: {0:s}".format(
+        pmisc.convert_list_to_string(list_of_target_fields)))
 
     logger.debug("Target field(s) selected: {0:s}".format(
-        pmisc.convert_list_to_string(list_of_target_fields)))
+        pmisc.convert_list_to_string(target_field_ID_list)))
 
     # === Generate the plot from the input MS
 
@@ -168,20 +231,16 @@ def main():
 
     if args.output_mode:
         if os.path.exists(outname_path):
-
             logger.warn(
-                "Using alternate name as diagnostic plot already exis under: {0:s} ".format(outname_path))
-
-            outname_path = os.path.join(reports_dir_path,
-                                        'after_otf_correction_' + output_fname)
+                "Diagnostic plot already exis under: {0:s} ".format(outname_path))
 
     logger.info(
-        "Generating diagnostics plot for target fields under: {0:s} ...".format(outname_path))
+        "Generating diagnostics plot for target fields under: {0:s} ".format(outname_path))
 
     visual_diagnostics.create_field_ID_RA_Dec_plot(
         mspath=input_ms_path,
         otf_fig_path=outname_path,
-        field_ID_list=list_of_target_fields,
+        field_ID_list=target_field_ID_list,
         ptitle=ptitle)
 
     logger.info("Exit 0")

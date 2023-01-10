@@ -47,6 +47,13 @@ def main():
         help='If set, the code attempts to only delete the casa executable',
         action='store_true')
 
+    parser.add_argument(
+        '-oc',
+        '--only_calibrators',
+        required=False,
+        help='If set, the code attempts to only split the calibrator fields',
+        action='store_true')
+
     # ===========================================================================
     args = parser.parse_args()  # Get the arguments
 

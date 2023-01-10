@@ -78,7 +78,7 @@ def create_field_ID_RA_Dec_plot(mspath,
 
     # Get the phase centres and ID's from the MS
     phase_centre_ID_dict = ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(
-        mspath=mspath, field_ID_list=None, ant1_ID=ant1_ID, ant2_ID=ant2_ID, close=close)
+        mspath=mspath, field_ID_list=field_ID_list, ant1_ID=ant1_ID, ant2_ID=ant2_ID, close=close)
 
     # Create the plot
     fig = plt.figure(1)

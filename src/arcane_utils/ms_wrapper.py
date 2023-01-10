@@ -707,6 +707,8 @@ def get_phase_centres_and_field_ID_list_dict_from_MS(mspath,
         field_Name_ID_dict = get_fieldname_and_ID_list_dict_from_MS(
             MS, ant1_ID=ant1_ID, ant2_ID=ant2_ID, close=False)
 
+        # NOTE: we are only using the first ID if more than one is associated
+        # with the same field
         field_ID_list = [field_Name_ID_dict[field_name][0]
                          for field_name in field_Name_ID_dict.keys()]
 

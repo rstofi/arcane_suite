@@ -12,7 +12,12 @@ Parts of the (sometimes unfinished) code, I am currently working.
     - finish the app(s):
     - write documentation for: 
     - check bugs for: ``otfms_pointing_diagnostics``
-    - add to Snakemake workflow: ``otfms_pointing_diagnostics``
+    - add to Snakemake workflow:
+
+    - add functionality of:
+        - using names not ID's to ``create_field_ID_RA_Dec_plot`` + propagate it into the pipeline
+        - split the calibrators
+        - plot the calibrator pointing in the pipeline
 
 Known bugs/issues
 -----------------

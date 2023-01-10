@@ -90,14 +90,55 @@ OTF_FIELD_IDs = list(OTF_FIELD_ID_MAPPING.keys())
 rule all:
     input:
         '{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
+        '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME),
+        '{0:s}'.format(LOG_dir) +\
+            '/plot_output_fields.log'
+
+#=== First and last rule: analytics
+
+#Plot OTF fields before correction
+rule plot_input_fields:
+    input:
+        '{0:s}'.format(YAML_path)
+    output:
+    log:
+        '{0:s}'.format(LOG_dir) +\
+        '/plot_input_fields.log'  
+    params:
+        log_dir = LOG_dir,
+        yaml_path = YAML_path,
+        output_fname_base = 'input_fields.png'
+    shell:
+        "arcane_otfms_pointing_diagnostics -c {params.yaml_path} " +\
+        "-o {params.output_fname_base} " +\
+        ">> {params.log_dir}/plot_input_fields.log"
+
+#Plot the fields after the OTF correction
+rule plot_output_fields:
+    input:
+        '{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
         '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME)
+    output:
+    log:
+        '{0:s}'.format(LOG_dir) +\
+        '/plot_output_fields.log'  
+    params:
+        log_dir = LOG_dir,
+        yaml_path = YAML_path,
+        output_fname_base = 'output_fields.png'
+    shell:
+        "arcane_otfms_pointing_diagnostics -c {params.yaml_path} " +\
+        "-o {params.output_fname_base} -om " +\
+        ">> {params.log_dir}/plot_output_fields.log "
 
 #=== Calibrator fields are split from the MS
 #Split the calibrator field(s) from input MS
 if bool(config['split_calibrators']):
     rule split_calibrators:
         input:
-            '{0:s}'.format(MS_dir)
+            '{0:s}'.format(MS_dir),
+            '{0:s}'.format(LOG_dir) +\
+            '/plot_input_fields.log' 
         output:
             directory('{0:s}/calibrators.ms'.format(BLOB_dir))
         log:
@@ -168,7 +209,8 @@ else:
 #List the new OTF pointing names
 rule list_new_otf_field_names:
     input:
-        '{0:s}'.format(YAML_path)
+        '{0:s}'.format(LOG_dir) +\
+        '/plot_input_fields.log' 
     output:
         '{0:s}/otf_field_names.dat'.format(OUTPUT_dir)
     log:
@@ -186,7 +228,9 @@ rule list_new_otf_field_names:
 rule split_otf_scans_by_pointing:
     input:
         '{0:s}'.format(MS_dir),
-        '{0:s}'.format(POINTING_REF_file)
+        '{0:s}'.format(POINTING_REF_file),
+        '{0:s}'.format(LOG_dir) +\
+        '/plot_input_fields.log' 
     output:
         directory('{0:s}'.format(OTF_BLOB_dir) +\
                 '/otf_pointing_no_{field_ID}.ms')
