@@ -27,7 +27,6 @@ def main():
     """
     NOTE: This docstring was created by ChatGPT3.
 
-
     This command-line tool generates (maximum) two plots: one for the target fields,
     and if provided, one for the calibrator fields.
 
@@ -42,10 +41,16 @@ def main():
     If the input ``-o`` parameter results in a file already exists and the code is
     throwing a warning
 
-    Parameters:
-    - '-c' or '--config_file' (required, str): Snakemake yaml configuration file for the otfms pipeline
-    - '-o' or '--output_fname' (optional, str): The output file name in which all the OTF field names being saved (default: None)
-    - '-om' or '--output_mode' (optional, bool): If set to True, the function runs in 'output' mode (default: False)
+    Keyword Arguments
+    -----------------
+    '-c' or '--config_file': (required, str)
+        Snakemake yaml configuration file for the otfms pipeline
+
+    '-o' or '--output_fname': (optional, str)
+        The output file name in which all the OTF field names being saved (default: None)
+
+    '-om' or '--output_mode': (optional, bool)
+        If set to True, the function runs in 'output' mode (default: False)
 
     """
     # === Set arguments
@@ -146,12 +151,16 @@ def main():
                         "The calibrator field {0:s} is not in the input MS!".format(field_Name))
 
                 else:
-                    calibrator_field_ID_list.append(
-                        field_name_and_ID_dict[field_Name][0])
-
                     if np.size(field_name_and_ID_dict[field_Name]) > 1:
-                        logger.critical(
-                            "Target field {0:s} has more than 1 associated field ID's, using only the first!".format(field_Name))
+                        logger.debug(
+                            "Calibrator field {0:s} has more than 1 associated field ID's!".format(field_Name))
+
+                        for field_ID in field_name_and_ID_dict[field_Name]:
+                            calibrator_field_ID_list.append(field_ID)
+
+                    else:
+                        calibrator_field_ID_list.append(
+                            field_name_and_ID_dict[field_Name][0])
 
             logger.info("Calibrator field(s) selected: {0:s}".format(
                 pmisc.convert_list_to_string(list_of_calibrator_fields)))
@@ -209,11 +218,16 @@ def main():
                 "The target field {0:s} is not in the input MS!".format(field_Name))
 
         else:
-            target_field_ID_list.append(field_name_and_ID_dict[field_Name][0])
-
             if np.size(field_name_and_ID_dict[field_Name]) > 1:
-                logger.critical(
-                    "Target field {0:s} has more than 1 associated field ID's, using only the first!".format(field_Name))
+                logger.debug(
+                    "Target field {0:s} has more than 1 associated field ID's!".format(field_Name))
+
+                for field_ID in field_name_and_ID_dict[field_Name]:
+                    target_field_ID_list.append(field_ID)
+
+            else:
+                target_field_ID_list.append(
+                    field_name_and_ID_dict[field_Name][0])
 
     logger.info("Target field(s) selected: {0:s}".format(
         pmisc.convert_list_to_string(list_of_target_fields)))

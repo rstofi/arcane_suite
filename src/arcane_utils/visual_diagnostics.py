@@ -64,16 +64,31 @@ def create_field_ID_RA_Dec_plot(mspath,
     Each point on the plot is labeled with the field ID.
 
     Parameters:
-    - mspath (str): The path to the MS file or an MS table object.
-    - otf_fig_path (str): The path to the output figure file.
-    - ptitle (str): The title of the plot. (default: "Phase centres (with field ID's)")
-    - field_ID_list (list): A list of field ID's to include in the plot. (default: None)
-    - ant1_ID (int): The ID of the first antenna. (default: 0)
-    - ant2_ID (int): The ID of the second antenna. (default: 1)
-    - close (bool): Whether to close the MS file after reading. (default: False)
+    -----------
+    mspath: str
+        The path to the MS file or an MS table object.
+
+    otf_fig_path: str
+        The path to the output figure file.
+
+    ptitle: Optional[str], default "Phase centres (with field ID's)"
+        The title of the plot.
+
+    field_ID_list: Optional[List[int]], default None
+        A list of field ID's to include in the plot.
+
+    ant1_ID: int, default 0
+        The ID of the first antenna.
+
+    ant2_ID: int, default 1
+        The ID of the second antenna.
+
+    close: bool, default False
+        Whether to close the MS file after reading.
 
     Returns:
-    None
+    -------
+    Creates a plot
     """
 
     # Get the phase centres and ID's from the MS

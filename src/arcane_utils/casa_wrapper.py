@@ -2,7 +2,8 @@
 is expected to be used across several pipelines of the suite.
 """
 
-__all__ = ['check_casa_installation']
+__all__ = ['check_casa_installation',
+           'clean_CASA_logfiles']
 
 import sys
 import logging
@@ -11,6 +12,7 @@ import warnings
 from shutil import which
 
 from arcane_utils import pipeline
+from arcane_utils import misc as pmisc
 
 from arcane_utils.globals import _CASA_BASE_NAME
 
@@ -70,6 +72,44 @@ the casa_alias in the config file!".format(
         if not casa_installation:
             logger.warning(
                 "Found '{0:s}' executable, but no 'casa' installation ...".format(casa_alias))
+
+
+def clean_CASA_logfiles(parent_path, maxdepth=0):
+    """
+    Remove CASA logfiles recursively from a parent directory.
+
+    These are:
+        - *.last
+        - *.pre
+        - casa-*.log
+
+    NOTE: This docstring was partially created by ChatGPT3.
+
+    Parameters
+    ----------
+    parent_path (str):
+        The path to the parent directory from where the search for the files should start.
+
+    maxdepth (int):
+        The maximum directory level that the function should traverse from the parent path.
+
+    Returns
+    -------
+
+    """
+
+    # Remove *.last files
+    pmisc.find_and_remove_files(parent_path, file_extension='.last',
+                                maxdepth=maxdepth)
+
+    # Remove casa-*.log files
+    pmisc.find_and_remove_files(parent_path, file_extension='.log',
+                                file_pattern='casa-', maxdepth=maxdepth)
+
+    # Remove *.pre files (sometimes CASA create these files that can be left
+    # on the system)
+    pmisc.find_and_remove_files(parent_path, file_extension='.pre',
+                                maxdepth=maxdepth)
 
 
 # === MAIN ===

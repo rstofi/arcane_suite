@@ -439,7 +439,23 @@ def get_otfms_output_variables(config_path):
 
     logger.info("Set 'MS_outname' to {0:s} ...".format(MS_outname))
 
-    return OTF_acronym, MS_outname
+    # === deep_clean
+    try:
+        deep_clean = config['OUTPUT'].getboolean('deep_clean')
+    # If there are comments in the line
+    except BaseException:
+        deep_clean_string = config.get('OUTPUT', 'deep_clean')
+        deep_clean_string = pipeline.remove_comment(
+            deep_clean_string).strip()
+
+        try:
+            deep_clean = misc.str_to_bool(deep_clean_string)
+        except BaseException:
+            logger.warning(
+                "Invalid argument given to 'deep_clean', set it to False...")
+            deep_clean = False
+
+    return OTF_acronym, MS_outname, deep_clean
 
 
 def get_times_from_reference_pointing_file(refrence_pointing_npz):

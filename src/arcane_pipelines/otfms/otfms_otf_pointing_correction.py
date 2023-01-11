@@ -88,9 +88,31 @@ def main():
     TO DO: allow to rename not oly the first row, by adding an argument for the
         row to rename
 
+    NOTE: The keyword argument descriptions were created by ChatGPT3.
+
     Keyword Arguments
     -----------------
+    '-c' or '--config_file': (required, str)
+        Snakemake yaml configuration file for the otfms pipeline
 
+    '-i' or '--otf_id': (optional, str, default: None)
+        The ID of the OTF pointing used
+
+    '-sn' or '--save_names_only': (optional, bool)
+        If True a file is generated with all OTF IDs and field names
+
+    '-o' or '--output_fname': (optional, str, default: None)
+        The output file name in which all the OTF field names being saved
+
+    '-ds' or '--direction_string': (optional, bool)
+        If True a direction string is outputted in a format readable by *chgcentre*
+
+    '-l' or '--log_file': (optional, str, default: None)
+        The output log file name, only considered when the -ds argument is set
+
+    '-sdc' or '--skip_direction_check': (optional, bool)
+        If given, the code checks if the MS phase centre and the direction from
+        the name are 'close enough' based on the config.yaml
 
     """
     # === Set arguments
@@ -191,7 +213,7 @@ def main():
 
     # Check if OTF directories exists or not
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                                var_name='otf_blob_dir')
+                                                var_name='blob_dir')
 
     # Compute the OTF pointing MS name based on the naming convenction
     otf_MS_path = os.path.join(

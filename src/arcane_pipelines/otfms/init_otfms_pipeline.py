@@ -404,7 +404,7 @@ def main():
     # === Configure output and garbage collection
     logger.debug('Configuring output and garbage collection...')
 
-    OTF_acronym, MS_outname = putil.get_otfms_output_variables(
+    OTF_acronym, MS_outname, deep_clean = putil.get_otfms_output_variables(
         args.config_file)
 
     # === Create pipeline
@@ -434,13 +434,6 @@ def main():
             os.path.join(working_dir, 'results')))
         sconfig.write('blob_dir:\n  {0:s}\n'.format(
             os.path.join(working_dir, 'blob')))
-        sconfig.write(
-            'otf_blob_dir:\n  {0:s}\n'.format(
-                os.path.join(
-                    os.path.join(
-                        working_dir,
-                        'blob'),
-                    'otf_pointings')))
         sconfig.write('log_dir:\n  {0:s}\n'.format(
             os.path.join(working_dir, 'logs')))
         sconfig.write('reports_dir:\n  {0:s}\n'.format(
@@ -463,6 +456,9 @@ def main():
             command_line_tool_alias_dict['casa_alias']))
         sconfig.write("chgcentre_alias:  '{0:s}'\n".format(
             command_line_tool_alias_dict['chgcentre_alias']))
+        sconfig.write(
+            'deep_clean: {0:s}\n'.format(
+                str(deep_clean)))
 
         # === List of calibrators and target fields
 

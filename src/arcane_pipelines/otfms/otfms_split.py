@@ -41,9 +41,24 @@ def main():
     NOTE that the code by default only creates a python script that can be executed
             by casa
 
+    NOTE: The keyword argument descriptions were created by ChatGPT3.
+
     Keyword Arguments
     -----------------
+    '-c' or '--config_file': (required, str)
+        Snakemake yaml configuration file for the otfms pipeline
 
+    '-i' or '--otf_id': (optional, str, default: -1)
+        The ID of the OTF pointing
+
+    '-oc' or '--only_calibrators': (optional, bool)
+        If set, the code attempts to only split the calibrator fields
+
+    '-fr' or '--full_rule_run': (optional, bool)
+        If set, the code attempts to call casa trough subprocess
+
+    '-p' or '--purge_executable':
+        (optional, bool) If set, the code attempts to only delete the casa executable
 
     """
     # === Set arguments
@@ -60,10 +75,18 @@ def main():
     parser.add_argument(
         '-i',
         '--otf_id',
-        required=True,
+        required=False,
         help='Snakemake yaml configuration file for the otfms pipeline',
         action='store',
+        default='-1',
         type=str)
+
+    parser.add_argument(
+        '-oc',
+        '--only_calibrators',
+        required=False,
+        help='If set, the code attempts to only split the calibrator fields',
+        action='store_true')
 
     parser.add_argument(
         '-fr',
@@ -82,62 +105,112 @@ def main():
     # ===========================================================================
     args = parser.parse_args()  # Get the arguments
 
-    logger.info(
-        "Running *split_otf_scans_by_pointing* with OTF_ID: {0:s}".format(args.otf_id))
-
     # Get parameters from the config.yaml file
     yaml_path = args.config_file
 
     MS = pipeline.get_var_from_yaml(yaml_path=yaml_path,
                                     var_name='MS')
 
-    output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                                var_name='otf_blob_dir')
+    if not args.only_calibrators and args.otf_id == '-1':
+        raise ValueError(
+            "Either the input OTF ID via '-i' or the calibrators via '-oc' needs to be defined!")
 
-    split_timedelta = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                                 var_name='split_timedelta')
+    if not args.only_calibrators:
+        logger.info(
+            "Running *split_otf_scans_by_pointing* splitting OTF pointing with OTF_ID: {0:s}".format(args.otf_id))
 
-    otf_field_ID_mapping = pipeline.get_var_from_yaml(
-        yaml_path=yaml_path, var_name='otf_field_ID_mapping')
+        output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                                    var_name='blob_dir')
 
-    # Get the output MS path and executable path
-    output_MS = os.path.join(output_otf_dir, 'otf_pointing_no_{0:s}.ms'.format(
-        args.otf_id))
+        split_timedelta = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='split_timedelta')
 
-    casa_executable_path = os.path.join(
-        output_otf_dir,
-        'split_otf_pointing_no_{0:s}.py'.format(
-            args.otf_id))
+        otf_field_ID_mapping = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='otf_field_ID_mapping')
+
+        # Get the output MS path and executable path
+        output_MS = os.path.join(
+            output_otf_dir,
+            'otf_pointing_no_{0:s}.ms'.format(
+                args.otf_id))
+
+        casa_executable_path = os.path.join(
+            output_otf_dir,
+            'split_otf_pointing_no_{0:s}.py'.format(
+                args.otf_id))
+
+    else:
+        logger.info(
+            "Running *split_otf_scans_by_pointing* splitting the calibrator fields")
+
+        output_calibrators_dir = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='blob_dir')
+
+        output_MS = os.path.join(output_calibrators_dir, 'calibrators.ms')
+
+        casa_executable_path = os.path.join(
+            output_calibrators_dir,
+            'split_calibrators.py')
 
     # === Create executable
     if not args.purge_executable:
-        # NOTE: only a single target field is currently supported
-        # TO DO: implement a check for which target field the time value
-        # belongs
-        target_field = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                                  var_name='target_fields')[0]
 
-        otf_pointing_time = otf_field_ID_mapping[args.otf_id]
+        if not args.only_calibrators:
+            # NOTE: only a single target field is currently supported
+            # target_fields_string = pipeline.get_var_from_yaml(yaml_path=yaml_path,
+            #                                          var_name='target_fields')[0]
 
-        del otf_field_ID_mapping, yaml_path
+            # This is a fix: now should work for any input field names
 
-        # Compute the selection range
-        start_unix_time = otf_pointing_time - (split_timedelta * 0.5)
-        end_unix_time = otf_pointing_time + (split_timedelta * 0.5)
+            target_fields_list = pipeline.get_var_from_yaml(
+                yaml_path=yaml_path, var_name='target_fields')
 
-        casa_timerange_selection_string = \
-            a_time.convert_unix_times_to_casa_timerange_selection(start_unix_time,
-                                                                  end_unix_time)
+            # Convert list to string (not literally with [] included in the
+            # string)
+            target_fields_string = ','.join(map(str, target_fields_list))
 
-        logger.info('Set visibility selection: {0:s}'.format(
-            casa_timerange_selection_string))
+            # TO DO: implement a check for which target field the time value
+            # belongs
 
-        logger.info('Creating casa executable at {0:s}'.format(
-            casa_executable_path))
+            otf_pointing_time = otf_field_ID_mapping[args.otf_id]
 
-        split_task_string = "split(vis = '{0:s}',\n outputvis = '{1:s}',\
-    \n timerange = '{2:s}',\n datacolumn = 'data',\n field = '{3:s}')".format(
-            MS, output_MS, casa_timerange_selection_string, target_field)
+            # Compute the selection range
+            start_unix_time = otf_pointing_time - (split_timedelta * 0.5)
+            end_unix_time = otf_pointing_time + (split_timedelta * 0.5)
+
+            casa_timerange_selection_string = \
+                a_time.convert_unix_times_to_casa_timerange_selection(start_unix_time,
+                                                                      end_unix_time)
+
+            logger.info('Set visibility time selection: {0:s}'.format(
+                casa_timerange_selection_string))
+
+            logger.info('Creating casa executable at {0:s}'.format(
+                casa_executable_path))
+
+            split_task_string = "split(vis = '{0:s}',\n outputvis = '{1:s}',\
+\n timerange = '{2:s}',\n datacolumn = 'data',\n field = '{3:s}')".format(
+                MS, output_MS, casa_timerange_selection_string, target_fields_string)
+
+        else:
+            calibrator_fields_list = pipeline.get_var_from_yaml(
+                yaml_path=yaml_path, var_name='target_fields')
+
+            # Convert list to string (not literally with [] included in the
+            # string)
+            calibrator_fields_string = ','.join(
+                map(str, calibrator_fields_list))
+
+            # No timerange selection
+            logger.info('Selected calibrator fields to split: {0:s}'.format(
+                calibrator_fields_string))
+
+            logger.info('Creating casa executable at {0:s}'.format(
+                casa_executable_path))
+
+            split_task_string = "split(vis = '{0:s}',\n outputvis = '{1:s}',\
+\n datacolumn = 'data',\n field = '{2:s}')".format(
+                MS, output_MS, calibrator_fields_string)
 
         listobs_string = "listobs(vis = '{0:s}')".format(output_MS)
 
@@ -200,7 +273,7 @@ def main():
         if os.path.isdir(output_MS):
             logger.info('Output MS found')
         else:
-            logger.warning('No output MS found!')
+            raise ValueError('No output MS found!')
 
     logger.info('Exit 0')
 

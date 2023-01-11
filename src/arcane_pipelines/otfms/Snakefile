@@ -35,13 +35,11 @@ output also shown):
     |   |
     |   -- calibrators.ms #The claibrators if the split is enabled
     |   |
-    |   -- otf_pointings/ #All the single OTF pointings
-    |       |
-    |       -- otf_pointing_no_0.ms
-    |       |
-    |       ...
-    |       |
-    |       -- otf_pointing_no_N.ms
+    |   -- otf_pointing_no_0.ms
+    |   |
+    |   ...
+    |   |
+    |   -- otf_pointing_no_N.ms
     |
     -- .snakemake/ #Hidden directory created by snakemake for pipeline handling
 
@@ -69,7 +67,6 @@ LOG_dir = config['log_dir']
 REPORTS_dir = config['reports_dir']
 BLOB_dir = config['blob_dir']
 OUTPUT_dir = config['output_dir']
-OTF_BLOB_dir = config['otf_blob_dir']
 YAML_path = os.path.join(WORKING_dir, 'config.yaml')
 MS_OUTPUT_NAME = config['MS_outname'] + '.ms' #Define extension here
 
@@ -89,10 +86,10 @@ OTF_FIELD_IDs = list(OTF_FIELD_ID_MAPPING.keys())
 #=== Rules ===
 rule all:
     input:
-        '{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
+        #'{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
         '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME),
-        '{0:s}'.format(LOG_dir) +\
-            '/plot_output_fields.log'
+        '{0:s}'.format(LOG_dir) + '/plot_output_fields.log',
+        '{0:s}'.format(LOG_dir) + '/clean_up.log'
 
 #=== First and last rule: analytics
 
@@ -144,18 +141,32 @@ if bool(config['split_calibrators']):
         log:
             '{0:s}/split_calibrators.log'.format(LOG_dir)
         params:
-            blob_dir = BLOB_dir,
-            log_dir = LOG_dir
+            yaml_path = YAML_path,
+            log_dir = LOG_dir,
+            casa_executable = os.path.join(BLOB_dir, 'split_calibrators.py'),
+            casa_alias = CASA_alias
         shell:
-            'mkdir {params.blob_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
+            'arcane_otfms_split -c {params.yaml_path} -oc ' +\
+            '> {params.log_dir}/split_calibrators.log ; ' +\
+            '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
+            '>> {params.log_dir}/split_calibrators.log 2>&1 ; ' +\
+            'arcane_otfms_split -p -c {params.yaml_path} -oc ' +\
+            '>> {params.log_dir}/split_calibrators.log '
+            #'mkdir {params.blob_dir}/calibrators.ms && touch {params.log_dir}/split_calibrators.log'
 
+    #Merge phase-rotated OTF pointings and the calibrator(s)
 
-    #Merge phase-rotated OTF pointings and the calibrator(s) 
+    #NOTE: this needs to be in a different rule from ``merge_otf_pointings`` due to
+    # the difference in the input patrameters, and I cannot put the input statement
+    # into the input statement...
+
+    #TO DO: maybe define a template rule for merging ?
+
     rule merge_otf_pointings_and_calibrators:
         input:
             expand('{0:s}'.format(LOG_dir) +\
             '/otf_pointing_no_{field_ID}_renaming.log', field_ID=OTF_FIELD_IDs),
-            expand('{0:s}'.format(OTF_BLOB_dir) +\
+            expand('{0:s}'.format(BLOB_dir) +\
             '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs),
             '{0:1}/calibrators.ms'.format(BLOB_dir)
         output:
@@ -184,7 +195,7 @@ else:
         input:
             expand('{0:s}'.format(LOG_dir) +\
             '/otf_pointing_no_{field_ID}_renaming.log', field_ID=OTF_FIELD_IDs),
-            expand('{0:s}'.format(OTF_BLOB_dir) +\
+            expand('{0:s}'.format(BLOB_dir) +\
             '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs)
         output:
             directory('{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME))
@@ -232,16 +243,15 @@ rule split_otf_scans_by_pointing:
         '{0:s}'.format(LOG_dir) +\
         '/plot_input_fields.log' 
     output:
-        directory('{0:s}'.format(OTF_BLOB_dir) +\
+        directory('{0:s}'.format(BLOB_dir) +\
                 '/otf_pointing_no_{field_ID}.ms')
     log:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_split.log'
     params:
-        #otf_blob_dir = OTF_BLOB_dir,
         log_dir = LOG_dir,
         yaml_path = YAML_path,
-        casa_executable = os.path.join(OTF_BLOB_dir, 'split_otf_pointing_no_{field_ID}.py'),
+        casa_executable = os.path.join(BLOB_dir, 'split_otf_pointing_no_{field_ID}.py'),
         casa_alias = CASA_alias
     shell:
         'arcane_otfms_split -c {params.yaml_path} -i {wildcards.field_ID} ' +\
@@ -254,14 +264,14 @@ rule split_otf_scans_by_pointing:
 #Apply the phase rotation on the single pointing
 rule apply_phase_rotation:
     input:
-        '{0:s}'.format(OTF_BLOB_dir) +\
+        '{0:s}'.format(BLOB_dir) +\
         '/otf_pointing_no_{field_ID}.ms',
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_split.log'
     output:
         #Leave empty as snakemake overwrite directories
     params:
-        otf_blob_dir = OTF_BLOB_dir,
+        blob_dir = BLOB_dir,
         log_dir = LOG_dir,
         yaml_path = YAML_path,
         chgcentre_alias = CHGCENTRE_alias
@@ -269,7 +279,7 @@ rule apply_phase_rotation:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_chgcentre.log'
     shell:
-        '{params.chgcentre_alias} {params.otf_blob_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
+        '{params.chgcentre_alias} {params.blob_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
         '$(arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '-ds -l {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log) ' +\
         '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log 2>&1'
@@ -287,17 +297,22 @@ rule rename_otf_pointings:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_renaming.log'
     params:
-        #otf_blob_dir = OTF_BLOB_dir,
         log_dir = LOG_dir,
         yaml_path = YAML_path
     shell:
         'arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_renaming.log'
 
+rule clean_up:
+    input:
+        '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME),
+        '{0:s}'.format(YAML_path)
+    output:
+    params:
+        log_dir = LOG_dir,
+        yaml_path = YAML_path
+    log:
+        '{0:s}/clean_up.log'.format(LOG_dir)
+    shell:
+        'arcane_otfms_clean_up -c {params.yaml_path} > {params.log_dir}/clean_up.log'
 
-
-#TO DO: add this rule at the end of the pipeline
-#Purge all casa leftover files: the .last files
-
-#IDEA => add this functionality to the shell: part of the rule `all`
-# so the clean up happens when the pipeline is finished

@@ -20,6 +20,25 @@ logger = pipeline.init_logger()
 
 def main():
     """
+    NOTE: This docstring was created by ChatGPT3.
+
+    Merges multiple OTF pointings in a single Measurement Set (MS) file.
+    The merge process can include also the Calibrators if the split_calibrators
+    option is set to True in the config.yaml file.
+
+    The function can also call CASA via subprocess to execute the merge task
+    (if the full_rule_run flag is set to True).
+
+    Keyword Arguments
+    -----------------
+    '-c' or '--config_file': (required, str)
+        Snakemake yaml configuration file for the otfms pipeline
+
+    '-fr' ot '--full_rule_run': Optional[bool], default False
+        If set, the code attempts to call casa trough subprocess
+
+    '-p' or '--purge_executable': Optional[bool], default False
+        If set, the code attempts to only delete the casa executable
 
     """
     # === Set arguments
@@ -47,13 +66,6 @@ def main():
         help='If set, the code attempts to only delete the casa executable',
         action='store_true')
 
-    parser.add_argument(
-        '-oc',
-        '--only_calibrators',
-        required=False,
-        help='If set, the code attempts to only split the calibrator fields',
-        action='store_true')
-
     # ===========================================================================
     args = parser.parse_args()  # Get the arguments
 
@@ -61,9 +73,6 @@ def main():
 
     # Get parameters from the config.yaml file
     yaml_path = args.config_file
-
-    output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                                var_name='otf_blob_dir')
 
     blob_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
                                           var_name='blob_dir')
@@ -94,7 +103,7 @@ def main():
 
         for ID in otf_field_ID_mapping.keys():
             otf_ms_path = os.path.join(
-                output_otf_dir, 'otf_pointing_no_{0:s}.ms'.format(ID))
+                blob_dir, 'otf_pointing_no_{0:s}.ms'.format(ID))
 
             list_of_otf_pointings.append(
                 "'" + otf_ms_path + "'\n")  # Add quotation marks
@@ -104,6 +113,21 @@ def main():
 
         logger.info('Selected {0:d} OTF pointings to merge'.format(
             np.size(list_of_otf_pointings)))
+
+        # Merge calibrators
+        if bool(
+            pipeline.get_var_from_yaml(
+                yaml_path=yaml_path,
+                var_name='split_calibrators')):
+
+            calibrators_MS_path = os.path.join(blob_dir, 'calibrators.ms')
+
+            logger.info(
+                "Merging calibrators from {0:s}".format(calibrators_MS_path))
+
+            # Add the calibrator MS path to the MS list
+
+            list_of_otf_pointings.append("'" + calibrators_MS_path + "'\n")
 
         list_of_otf_ms_string = pmisc.convert_list_to_string(
             list_of_otf_pointings)

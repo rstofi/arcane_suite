@@ -709,8 +709,16 @@ def get_phase_centres_and_field_ID_list_dict_from_MS(mspath,
 
         # NOTE: we are only using the first ID if more than one is associated
         # with the same field
-        field_ID_list = [field_Name_ID_dict[field_name][0]
-                         for field_name in field_Name_ID_dict.keys()]
+        # field_ID_list = [field_Name_ID_dict[field_name][0]
+        #                 for field_name in field_Name_ID_dict.keys()]
+
+        # Fixed.
+
+        field_ID_list = []
+
+        for field_name in field_Name_ID_dict.keys():
+            for field_ID in field_Name_ID_dict[field_name]:
+                field_ID_list.append(field_ID)
 
         logger.debug("Field ID's from MS: {0:s}".format(
             misc.convert_list_to_string(field_ID_list)))

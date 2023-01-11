@@ -33,5 +33,6 @@ _otfms_default_config_dict = {'ENV': {
     'position_crossmatch_threshold': ['0.0025', False, 'float or none']},  # 9"
     'OUTPUT': {
     'OTF_acronym': ['OTFasp', True, 'string'],
-    'MS_outname': ['final', True, 'string (without the .ms extension)']
+    'MS_outname': ['final', True, 'string (without the .ms extension)'],
+    'deep_clean': ['False', False, 'boolean']
 }}
