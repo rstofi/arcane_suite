@@ -133,6 +133,8 @@ def find_and_remove_files(parent_path,
                                     r, files)))
                         os.remove(os.path.join(r, files))
 
+                        files_removed += 1
+
                     elif file_pattern in files:
                         logger.info(
                             "Removing file: {0:s}".format(
@@ -140,7 +142,7 @@ def find_and_remove_files(parent_path,
                                     r, files)))
                         os.remove(os.path.join(r, files))
 
-                    files_removed += 1
+                        files_removed += 1
 
     # TO DO: add exception handling
 

@@ -36,3 +36,6 @@ _otfms_default_config_dict = {'ENV': {
     'MS_outname': ['final', True, 'string (without the .ms extension)'],
     'deep_clean': ['False', False, 'boolean']
 }}
+
+# Some misc default values
+_clean_up_maxdepth = 1  # The maximum depth used by the `clean_up` rule

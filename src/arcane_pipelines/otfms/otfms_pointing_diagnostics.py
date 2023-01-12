@@ -91,6 +91,13 @@ def main():
     reports_dir_path = pipeline.get_var_from_yaml(yaml_path=yaml_path,
                                                   var_name='reports_dir')
 
+    # This is a weird bug fix: if the reports directory is deleted, the code fails
+    # So I am gonna check if the directory exists, and if not, I am creating it
+    # This could be solved in the Snakefile as well...
+    if not os.path.exists(reports_dir_path):
+        logger.warn("The /reports dir is missing, creating it now!")
+        os.mkdir(reports_dir_path)
+
     if not args.output_mode:
         logger.info("Running *otfms_position_diagnostic* in 'input' mode")
 
