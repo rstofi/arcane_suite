@@ -187,8 +187,22 @@ def main():
     logger.info('Solving for environment...')
 
     # Get the ENV variables from config
-    working_dir = pipeline.get_common_env_variables(
+    working_dir, log_level = pipeline.get_common_env_variables(
         args.config_file)
+
+    # Update logger if the default log level is not INFO:
+    if log_level != 'INFO':
+        logger.info(
+            "Updating logger level to '{0:s}' based on config file...".format(log_level))
+
+        # Update the log level
+        new_log_level = logging.getLevelName(log_level)
+
+        logger.setLevel(new_log_level)
+        utils_logger.setLevel(new_log_level)
+        pipelines_logger.setLevel(new_log_level)
+
+        del new_log_level
 
     # Get aliases
     command_line_tool_alias_dict = pipeline.get_aliases_for_command_line_tools(
@@ -438,6 +452,7 @@ def main():
             os.path.join(working_dir, 'logs')))
         sconfig.write('reports_dir:\n  {0:s}\n'.format(
             os.path.join(working_dir, 'reports')))
+        sconfig.write('log_level:\n  {0:s}\n'.format(log_level))
         sconfig.write('MS:\n  {0:s}\n'.format(
             MS_path))
         sconfig.write('pointing_ref:\n  {0:s}\n'.format(

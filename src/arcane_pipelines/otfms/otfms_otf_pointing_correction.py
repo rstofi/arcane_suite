@@ -7,6 +7,7 @@ import os
 import argparse
 import numpy as np
 import datetime
+import logging
 
 from astropy.coordinates import SkyCoord
 from astropy import units as u
@@ -178,11 +179,24 @@ def main():
     # Get parameters from the config.yaml file
     yaml_path = args.config_file
 
+    # Set the log level (we know that it is in the right format)
+    log_level = pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                           var_name='log_level')
+
     # Run when only te names are generated
     if args.save_names_only:
         logger = pipeline.init_logger()
 
         logger.info("Running *otfms_otf_pointing_correction* in 'listing' mode")
+
+        if log_level != 'INFO':
+            logger.info(
+                "Updating logger level to '{0:s}' based on config file...".format(log_level))
+
+            # Update the log level
+            new_log_level = logging.getLevelName(log_level)
+
+            logger.setLevel(new_log_level)
 
         if args.output_fname is None:
             raise ValueError('No output file name is provided!')
@@ -210,6 +224,17 @@ def main():
         logger = pipeline.init_logger()
         logger.info("Running *otf_pointing_correction* in 'renaming' " +
                     "mode with OTF_ID: {0:s}".format(args.otf_id))
+
+    if log_level != 'INFO':
+        logger.info(
+            "Updating logger level to '{0:s}' based on config file...".format(log_level))
+
+        # Update the log level
+        new_log_level = logging.getLevelName(log_level)
+
+        logger.setLevel(new_log_level)
+
+    del new_log_level
 
     # Check if OTF directories exists or not
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,

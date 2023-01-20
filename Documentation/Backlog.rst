@@ -8,15 +8,14 @@ Ongoing stories
 
 Parts of the (sometimes unfinished) code, I am currently working.
 
-    - finish the function(s): 
-    - finish the app(s): ``otfms_clean_up``
-    - write documentation for: ``otfms_clean_up``
-    - check bugs for:  ``otfms_clean_up``
+    - finish the function(s):
+    - finish the app(s):
+    - write documentation for:
+    - check bugs for:
     - add to Snakemake workflow:
 
     - add functionality of:
-        - top level switch to change all ``otfms`` app's log level to debug
-
+       
 Known bugs/issues
 -----------------
 

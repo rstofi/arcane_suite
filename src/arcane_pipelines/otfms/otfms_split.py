@@ -152,6 +152,21 @@ def main():
             output_calibrators_dir,
             'split_calibrators.py')
 
+    # Set the log level (we know that it is in the right format)
+    log_level = pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                           var_name='log_level')
+
+    if log_level != 'INFO':
+        logger.info(
+            "Updating logger level to '{0:s}' based on config file...".format(log_level))
+
+        # Update the log level
+        new_log_level = logging.getLevelName(log_level)
+
+        logger.setLevel(new_log_level)
+
+        del new_log_level
+
     # === Create executable
     if not args.purge_executable:
 
@@ -194,7 +209,7 @@ def main():
 
         else:
             calibrator_fields_list = pipeline.get_var_from_yaml(
-                yaml_path=yaml_path, var_name='target_fields')
+                yaml_path=yaml_path, var_name='calibrator_fields')
 
             # Convert list to string (not literally with [] included in the
             # string)

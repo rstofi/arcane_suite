@@ -86,6 +86,21 @@ def main():
     # Get parameters from the config.yaml file
     yaml_path = args.config_file
 
+    # Set the log level (we know that it is in the right format)
+    log_level = pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                           var_name='log_level')
+
+    if log_level != 'INFO':
+        logger.info(
+            "Updating logger level to '{0:s}' based on config file...".format(log_level))
+
+        # Update the log level
+        new_log_level = logging.getLevelName(log_level)
+
+        logger.setLevel(new_log_level)
+
+        del new_log_level
+
     # Get the reports_dir full path
 
     reports_dir_path = pipeline.get_var_from_yaml(yaml_path=yaml_path,

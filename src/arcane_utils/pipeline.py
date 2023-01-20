@@ -357,7 +357,29 @@ def get_common_env_variables(config_path):
     except BaseException:
         raise ValueError('Mandatory parameter working_dir has to be specified')
 
-    return working_dir
+    # The log level controlling the logging level trough the pipeline
+    try:
+        log_level = config.get('ENV', 'log_level')
+        log_level = remove_comment(log_level).strip()
+
+        if log_level == '':
+            logger.debug(
+                "No 'log_level' specified, falling back to default level of 'INFO'!")
+
+            log_level = 'INFO'
+
+    except BaseException:
+        logger.debug(
+            "Invalid format for 'log_level' specified, falling back to default level of 'INFO'!")
+        log_level = 'INFO'
+
+    # Any valid string can pass up to this point
+    if log_level not in _VALID_LOG_LEVELS:
+        logger.debug(
+            "Invalid format for 'log_level' specified, falling back to default level of 'INFO'!")
+        log_level = 'INFO'
+
+    return working_dir, log_level
 
 
 def get_aliases_for_command_line_tools(
@@ -561,6 +583,11 @@ arcane_suite at {1:s}\n'.format(pipeline_name, str(datetime.datetime.now())))
         aconfig.write(f"{'working_dir':<{_PARAM_WHITESPACE_SKIP}}" +
                       f"{'= {0:s}':<{_COMMENT_WHITESPACE_SKIP}}".format('') +
                       '#Mandatory, absolute path\n')
+
+        aconfig.write(
+            f"{'log_level':<{_PARAM_WHITESPACE_SKIP}}" +
+            f"{'= INFO {0:s}':<{_COMMENT_WHITESPACE_SKIP}}".format('') +
+            '#Optional, with values of the python module logging (e.g. INFO, DEBUG.. etc.)\n')
 
 
 def add_aliases_to_config_file(
