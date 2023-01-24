@@ -81,6 +81,12 @@ def rad_to_deg(x):
     return ((x * 180) / np.pi)
 
 
+def deg_to_arcsec(x):
+    """
+    """
+    return x * 3600
+
+
 def find_and_remove_files(parent_path,
                           file_extension,
                           file_pattern=None,

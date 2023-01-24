@@ -25,6 +25,7 @@ import subprocess
 
 from shutil import which
 
+# ===Import globals
 from arcane_utils.globals import _VALID_LOG_LEVELS, _SNAKEMAKE_BASE_NAME, \
     _PARAM_WHITESPACE_SKIP, _COMMENT_WHITESPACE_SKIP, _SUPPORTED_CONFIG_VAR_TYPES
 

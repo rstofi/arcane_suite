@@ -1,6 +1,7 @@
 """Default variables used by the `arcane_otfms` pipeline
 """
 
+# === Import globals
 from arcane_utils.globals import _SNAKEMAKE_BASE_NAME, _CASA_BASE_NAME
 
 # Define the default alias names and values for the command line tools
