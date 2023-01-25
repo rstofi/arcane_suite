@@ -8,7 +8,7 @@ Ongoing stories
 
 Parts of the (sometimes unfinished) code, I am currently working.
 
-    - finish the function(s): to get the reference coordinates from a fits file
+    - finish the function(s):
     - finish the app(s):
     - write documentation for:
     - check bugs for:
@@ -16,7 +16,6 @@ Parts of the (sometimes unfinished) code, I am currently working.
         - to have the times, and RA, Dec coordinates added to the OTF field names file
 
     - add functionality of:
-        - getting the synthesised beam parameters from a fits file
         - make a separate file for (unit) conversions
        
 Known bugs/issues
