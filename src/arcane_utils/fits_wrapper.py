@@ -353,7 +353,7 @@ def get_obs_date_from_header(fitspath, hdu_index=0):
     If the 'DATE-OBS' card contains an ISO or ISOT format time string, the code
     returns the date in UNIX format
 
-    TO DO: handle cases with timeranges.
+    The fits TIME-oBS definition in J2000: https://fits.gsfc.nasa.gov/year2000.html
 
     Parameters
     ----------
