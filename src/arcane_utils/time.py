@@ -5,9 +5,10 @@ NOTE: UNIX time formatting is not a *true* represantation of UTC because of leap
 
 """
 
-__all__ = ['convert_MJD_to_UNIX', 'soft_check_if_time_is_UNIX',
+__all__ = ['get_time_from_ISO_based_string',
+           'convert_MJD_to_UNIX', 'soft_check_if_time_is_UNIX',
            'casa_datetime_to_unix_time', 'unix_time_to_casa_datetime',
-           'convert_casa_timerange_selection_to_unix_times']
+           'convert_casa_timerange_selection_to_unix_times', ]
 
 import sys
 import logging
@@ -21,6 +22,60 @@ from astropy.time import Time
 logger = logging.getLogger(__name__)
 
 # === Functions ===
+
+
+def get_time_from_ISO_based_string(time_string, scale='utc'):
+    """Simple script to convert an ISO or ISOT format time string to UNIX format
+    time value.
+
+    Ths input string format either ISO:
+
+    ``yyyy-mm-dd hh:mm:ss.ss``
+
+    or in ISOT (T instead of space):
+
+    ``yyyy-mm-ddThh:mm:ss.ss``
+
+    format.
+
+    The time system or scaling can be also defined (e.g. utc, tt, iso...etc)
+
+    The code returns the time value as an UNIX formatted float.
+
+    Parameters
+    ----------
+    time_string: str
+        The ISO or ISOT formatted time string
+
+    scale: str, opt
+        The time system scaling (e.g. utc, tt, iso...etc)
+
+    Returns
+    -------
+    unix_time: float
+        The time value in UNIX format
+
+    """
+    try:
+        time_val = Time(time_string, format='iso', scale=scale)
+        logger.debug("Input time string format is ISO")
+    except BaseException:
+        pass
+
+    try:
+        time_val = Time(time_string, format='isot', scale=scale)
+        logger.debug("Input time string format is ISOT")
+    except BaseException:
+        raise ValueError(
+            'The input time string is not in a valid ISO/ISOT format!')
+
+    # Convert to UNIX time
+    time_val.format = 'unix'
+
+    if soft_check_if_time_is_UNIX(time_val.value):
+        return time_val.value
+    else:
+        raise ValueError("Time is not in UNIX format!")
 
 
 def convert_MJD_to_UNIX(time_array):
@@ -74,12 +129,12 @@ def soft_check_if_time_is_UNIX(time_val):
     #start_date = -1144026000
 
     # 1 January 1970
-    min_valid_UNIX_time = 0
+    #min_valid_UNIX_time = 0
 
     # Now
-    max_valid_UNIX_time = time.time()  # Not considering timezone
+    # max_valid_UNIX_time = time.time()  # Not considering timezone
 
-    if min_valid_UNIX_time < time_val < max_valid_UNIX_time:
+    if 0 < time_val < time.time():
         return True
     else:
         return False

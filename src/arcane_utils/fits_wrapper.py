@@ -7,7 +7,8 @@ __all__ = [
     'get_Ndim_from_header',
     'get_axis_params_from_header',
     'get_synthesizeb_beam_from_header',
-    'get_fits_reference_coordinates']
+    'get_fits_reference_coordinates_from_header',
+    'get_obs_date_from_header']
 
 
 import numpy as np
@@ -20,6 +21,7 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 
 from arcane_utils import misc as a_misc
+from arcane_utils import time as a_time
 
 # === Set up logging
 logger = logging.getLogger(__name__)
@@ -273,7 +275,8 @@ def get_synthesizeb_beam_from_header(fitspath, hdu_index=0):
     return b_maj, b_min, b_pa
 
 
-def get_fits_reference_coordinates(fitspath, hdu_index=0, origin=1):
+def get_fits_reference_coordinates_from_header(
+        fitspath, hdu_index=0, origin=1):
     """This function gets the RA and Dec sky coordinates in degrees for the reference
     pixel of a .fits file.
 
@@ -341,6 +344,71 @@ def get_fits_reference_coordinates(fitspath, hdu_index=0, origin=1):
 
     # Return sky coordinates in deg
     return ref_coords.ra.deg, ref_coords.dec.deg
+
+
+def get_obs_date_from_header(fitspath, hdu_index=0):
+    """Get the observation time from the header based on the 'DATE-OBS' card.
+    If no 'DATE-OBS' card is found, the code returns None.
+
+    If the 'DATE-OBS' card contains an ISO or ISOT format time string, the code
+    returns the date in UNIX format
+
+    TO DO: handle cases with timeranges.
+
+    Parameters
+    ----------
+    fitspath: str
+        The input FITS path or an ``astropy.io.fits.header.Header`` object
+
+    hdu_index: int, opt
+        The index of the HDU from the HDU list which header is returned. Ignored
+        if the input is an ``astropy.io.fits.header.Header`` object
+
+    origin: int, opt
+        Sets the .fits image indexing (e.g. from 0 or 1)
+
+    Returns
+    -------
+    unix_time: float or None
+        The time value in UNIX format
+
+    """
+    logger.debug('Collecting obs date.')
+
+    hdu_header = get_hdu_header(fitspath, hdu_index)
+
+    if 'DATE-OBS' in hdu_header:
+        logger.debug("Found 'DATE-OBS' card in header.")
+
+        # Should be a CASA-compatible time string
+        date_obs = hdu_header['DATE-OBS']
+
+        if 'TIMESYS' in hdu_header:
+            logger.debug(
+                "Found 'TIMESYS' card with specified time scale of {0:s}".format(
+                    hdu_header['TIMESYS']))
+
+            # Convert to lower case letters for astropy time
+            timesys = hdu_header['TIMESYS'].lower()
+
+        else:
+            logger.debug(
+                "No 'TIMESYS' card found in header, set scaling to 'UTC'")
+
+            timesys = 'utc'
+
+        # Try to convert the 'DATE-OBS' string to UNIX time assuming ISO/ISOT
+        # string formatting
+
+        date_obs_val = a_time.get_time_from_ISO_based_string(
+            date_obs, scale=timesys)
+
+        return date_obs_val
+
+    else:
+        logger.warning("No 'DATE-OBS' card found in header.")
+
+        return None
 
 
 # === MAIN ===
