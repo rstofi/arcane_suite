@@ -4,4 +4,3 @@ scipy>=1.7.1
 astropy>=5.0
 python-casacore>=3.4.0
 matplotlib>=3.5.0
-graphviz>=2.43.0
