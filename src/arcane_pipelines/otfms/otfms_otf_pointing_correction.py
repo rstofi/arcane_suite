@@ -234,7 +234,7 @@ def main():
 
         logger.setLevel(new_log_level)
 
-    del new_log_level
+        del new_log_level
 
     # Check if OTF directories exists or not
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
