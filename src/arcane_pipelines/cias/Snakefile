@@ -1,0 +1,50 @@
+"""Sankefile for the arcane_cias pipeline. Each rule calls a custom command-line application
+with the name `arcane_cias_rule_name_in_this_snakefile`
+
+Some rules are only a simple wrapper around casa tasks, but some are doing more
+than calling task from some library.
+
+For more info on the individual rules, see the correspondig python scripts!
+
+The arcane_cias pipleine builds the following file structure (with the pipeline
+output also shown):
+
+    working_dir/
+    |
+    -- snakefile #This file, created at pipeline initialisation
+    |
+    -- config.yaml #Created at pipeline initialisation
+    |
+    -- results/ #The main results from the pipeline goes here
+    |   |
+    |    -- final.ms #The OTF format MS => this one is created here
+    |   |
+    |    -- otf_field_names.dat #The file containing the OTF indices and field names
+    |
+    -- logs/
+    |   |
+    |    -- log files from all rules
+    |
+    -- reports/
+    |   |
+    |   -- DAG of the graph (created during building phase)
+    |   |
+    |   -- analytics plots
+    |
+    -- blob/ #This directory might be entirely purged at the end of the pipeline completion
+    |   |
+    |   -- calibrators.ms #The claibrators if the split is enabled
+    |   |
+    |   -- otf_pointing_no_0.ms
+    |   |
+    |   ...
+    |   |
+    |   -- otf_pointing_no_N.ms
+    |
+    -- .snakemake/ #Hidden directory created by snakemake for pipeline handling
+
+
+    snakemake --rulegraph | dot -Tpdf > arcane_cias_rule_graph.pdf
+
+"""
+
