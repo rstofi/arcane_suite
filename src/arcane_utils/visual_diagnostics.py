@@ -50,13 +50,14 @@ logger = logging.getLogger(__name__)
 
 # === Functions ===
 
-def create_field_ID_RA_Dec_plot(mspath,
-                                otf_fig_path,
-                                ptitle="Phase centres (with field ID's)",
-                                field_ID_list=None,
-                                ant1_ID=0,
-                                ant2_ID=1,
-                                close=False):
+def create_field_ID_RA_Dec_plot(mspath:str,
+                                otf_fig_path:str,
+                                ptitle:str="Phase centres (with field ID's)",
+                                field_ID_list:list=None,
+                                display_new_IDs_treshold:int=100,
+                                ant1_ID:int=0,
+                                ant2_ID:int=1,
+                                close:bool=False):
     """
     NOTE: This docstring was created by ChatGPT3.
 
@@ -91,6 +92,9 @@ def create_field_ID_RA_Dec_plot(mspath,
     Creates a plot
     """
 
+    logger.info("Creating field IDs Ra--Dec plot with ID displyay threshold {0:s}".format(
+            display_new_IDs_treshold))
+
     # Get the phase centres and ID's from the MS
     phase_centre_ID_dict = ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(
         mspath=mspath, field_ID_list=field_ID_list, ant1_ID=ant1_ID, ant2_ID=ant2_ID, close=close)
@@ -113,9 +117,10 @@ def create_field_ID_RA_Dec_plot(mspath,
                    phase_centre_ID_dict[field_id][1],
                    color=c1, marker='o', s=50)
 
-        ax.text(phase_centre_ID_dict[field_id][0] + text_offset,
-                phase_centre_ID_dict[field_id][1] + text_offset,
-                field_id, fontsize=14)
+        if len(phase_centre_ID_dict) < display_new_IDs_treshold:
+            ax.text(phase_centre_ID_dict[field_id][0] + text_offset,
+                    phase_centre_ID_dict[field_id][1] + text_offset,
+                    field_id, fontsize=14)
 
     ax.set_xlabel(r'RA -- SIN [deg]', fontsize=18)
     ax.set_ylabel('Dec -- SIN [deg]', fontsize=18)

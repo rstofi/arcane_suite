@@ -39,6 +39,7 @@ _VALID_LOG_LEVELS = ['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG']
 _PYTHON_BASE_NAME = 'python'
 _SNAKEMAKE_BASE_NAME = 'snakemake'
 _CASA_BASE_NAME = 'casa'
+_CARACAL_BASE_NAME = 'caracal'
 
 # Define the supported variable types for automated reading
 _SUPPORTED_CONFIG_VAR_TYPES = ['int', 'float']

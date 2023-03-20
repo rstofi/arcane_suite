@@ -17,6 +17,9 @@ from arcane_utils import ms_wrapper
 from arcane_utils import time as a_time
 from arcane_utils import casa_wrapper
 
+from arcane_pipelines.otfms import cias_pipeline_util as putil
+from arcane_pipelines.otfms import cias_defaults
+
 # === Set logging
 logger = pipeline.init_logger(color=True)
 logger.setLevel(logging.INFO)
@@ -159,6 +162,22 @@ def main():
         pipelines_logger.setLevel(logging.DEBUG)
 
         logger.debug('Set log level to DEBUG ...')
+
+    if args.template:
+        logger.info(
+            'Creating template config file for *cias* pipeline from arcane_suite')
+
+        if not args.overwrite_lock:
+            putil.init_config_for_otfms(template_path=args.config_file)
+        else:
+            putil.init_config_for_otfms(template_path=args.config_file,
+                                        overwrite=False)
+
+        # TNow halt the program
+        sys.exit(0)
+
+    else:
+        logger.info('Building *cias* pipeline from arcane_suite')
 
 
     # === Exit
