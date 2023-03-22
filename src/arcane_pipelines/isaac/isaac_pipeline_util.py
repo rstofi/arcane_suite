@@ -1,4 +1,4 @@
-"""Collection of utility functions unique to the `cias` pipeline
+"""Collection of utility functions unique to the `isaac` pipeline
 """
 
 __all__ = ['init_config_for_otfms']
@@ -8,6 +8,9 @@ import logging
 import configparser
 
 from arcane_utils import pipeline
+
+# Load pipeline default parameters
+from arcane_pipelines.isaac import isaac_defaults
 
 # === Set up logging
 logger = logging.getLogger(__name__)
@@ -39,9 +42,9 @@ def init_config_for_otfms(
 
     # Generate a basic template with the common variables used in all pipelines
     pipeline.init_empty_config_file_with_common_ENV_variables(
-        template_path=template_path, pipeline_name='cias', overwrite=overwrite)
+        template_path=template_path, pipeline_name='isaac', overwrite=overwrite)
 
     pipeline.add_aliases_to_config_file(
         template_path=template_path,
-        aliases_list=otfms_defaults._cias_default_aliases,
-        defaults_list=otfms_defaults._cias_default_alias_values)
+        aliases_list=isaac_defaults._isaac_default_aliases,
+        defaults_list=isaac_defaults._isaac_default_alias_values)

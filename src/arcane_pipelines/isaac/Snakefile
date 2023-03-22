@@ -47,4 +47,8 @@ output also shown):
     snakemake --rulegraph | dot -Tpdf > arcane_cias_rule_graph.pdf
 
 """
+import os
+import numpy as np
 
+#=== Configuration ===
+configfile: "config.yaml"

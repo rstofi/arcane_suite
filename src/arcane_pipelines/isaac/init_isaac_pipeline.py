@@ -17,8 +17,8 @@ from arcane_utils import ms_wrapper
 from arcane_utils import time as a_time
 from arcane_utils import casa_wrapper
 
-from arcane_pipelines.otfms import otfms_pipeline_util as putil
-from arcane_pipelines.otfms import otfms_defaults
+from arcane_pipelines.isaac import isaac_pipeline_util as putil
+from arcane_pipelines.isaac import isaac_defaults
 
 # === Set logging
 logger = pipeline.init_logger(color=True)
@@ -165,7 +165,7 @@ def main():
 
     if args.template:
         logger.info(
-            'Creating template config file for *otfms* pipeline from arcane_suite')
+            'Creating template config file for *isaac* pipeline from arcane_suite')
 
         if not args.overwrite_lock:
             putil.init_config_for_otfms(template_path=args.config_file)
@@ -177,7 +177,7 @@ def main():
         sys.exit(0)
 
     else:
-        logger.info('Building *otfms* pipeline from arcane_suite')
+        logger.info('Building *isaac* pipeline from arcane_suite')
 
     # Check if the config file exists
     if not os.path.exists(args.config_file):
@@ -207,8 +207,8 @@ def main():
     # Get aliases
     command_line_tool_alias_dict = pipeline.get_aliases_for_command_line_tools(
         config_path=args.config_file,
-        aliases_list=otfms_defaults._otfms_default_aliases,
-        defaults_list=otfms_defaults._otfms_default_alias_values)
+        aliases_list=isaac_defaults._isaac_default_aliases,
+        defaults_list=isaac_defaults._isaac_default_alias_values)
 
     # Checking for required software
     if not args.skip_snakemake_check:
@@ -227,15 +227,9 @@ def main():
     if not args.skip_dependencies_check:
         # Check for chgcentre
         pipeline.check_is_installed(
-            command_line_tool_alias_dict['chgcentre_alias'])
-
-        # Check for casa installation
-        casa_wrapper.check_casa_installation(
-            command_line_tool_alias_dict['casa_alias'])
-
+            command_line_tool_alias_dict['caracal_alias'])
     else:
-        logger.warning('Skip checking for `chgcentre` installation')
-        logger.warning('Skip checking for CASA installation')
+        logger.warning('Skip checking for `caracal` installation')
 
     if not os.path.exists(working_dir):
         os.mkdir(working_dir)
@@ -253,173 +247,18 @@ def main():
                 'Overwriting Sankefile and coinfig file under {0:s}'.format(working_dir))
             # Because the files under `working_dir` will be overwritten
 
-    # Get the input data
-    MS_path, pointing_ref_path, split_calibrators = putil.get_otfms_data_variables(
-        args.config_file)
-
-    if not os.path.exists(MS_path):
-        raise FileNotFoundError(
-            'Missing input MS directory {0:s}'.format(MS_path))
-
-    if not os.path.exists(pointing_ref_path):
-        raise FileNotFoundError(
-            'Missing input reference pointing file {0:s}'.format(pointing_ref_path))
+    #=== Need to check for input data here!
 
     # Add checks here for the Snakefile if exists
     snakefile_path = os.path.join(
         os.path.dirname(
-            sys.modules['arcane_pipelines.otfms'].__file__),
+            sys.modules['arcane_pipelines.isaac'].__file__),
         'Snakefile')
 
     if not os.path.exists(snakefile_path):
         raise FileNotFoundError('Corrupted installation: Snakefile not found')
 
     output_snakefile_path = os.path.join(working_dir, 'Snakefile')
-
-    # === Read the data sub selection from the config file
-    logger.info('Solving for OTF field initialization...')
-
-    MS = ms_wrapper.create_MS_table_object(MS_path)
-
-    calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, \
-        time_crossmatch_threshold, split_timedelta, position_crossmatch_threshold = \
-        putil.get_otfms_data_selection_from_config(args.config_file,
-                                                   split_calibrators=split_calibrators)
-
-    # Check if calibrator and target fields are in the MS
-    field_Name_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(
-        MS, ant1_ID=ant1_ID, ant2_ID=ant2_ID, close=False)
-
-    if split_calibrators:
-        for calibrator in calibrator_list:
-            if calibrator not in field_Name_ID_dict.keys():
-                raise ValueError(
-                    "Calibrator field '{0:s}' not found in the input MS!".format(calibrator))
-
-        # The [1:-1] removes the [] from the string
-        logger.info(
-            "Selected calibrator field(s): {0:s} ...".format(
-                str(calibrator_list)[
-                    1:-1]))
-
-        del calibrator
-    else:
-        logger.info('No calibrator fields are selected...')
-
-    for target in target_field_list:
-        if target not in field_Name_ID_dict.keys():
-            raise ValueError(
-                "Target field '{0:s}' not found in the input MS!".format(target))
-
-    logger.info(
-        "Selected OTF scan field(s): {0:s} ...".format(
-            str(target_field_list)[
-                1:-1]))
-
-    if len(target_field_list) > 1:
-        logger.warning(
-            'Currently only single target field processing is supported!')
-
-    del target
-
-    # Check for scan data selection
-    if scans is not None:
-        field_scan_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(
-            MS, scan_ID=True, ant1_ID=ant1_ID, ant2_ID=ant2_ID, close=False)
-
-        target_field_scans = []
-
-        for target in target_field_list:
-            target_field_scans.extend(field_scan_dict[target])
-
-        del target
-
-        for sID in scans:
-            if sID not in target_field_scans:
-                raise ValueError(
-                    'Target field(s) have no scan {0:d}'.format(sID))
-
-        del sID
-
-        # Get times
-        times = ms_wrapper.get_time_based_on_field_names_and_scan_IDs(
-            MS,
-            field_names=target_field_list,
-            scan_IDs=scans,
-            to_UNIX=True,
-            ant1_ID=ant1_ID,
-            ant2_ID=ant2_ID,
-            close=False)
-
-    else:
-        # Get times
-        times = ms_wrapper.get_time_based_on_field_names_and_scan_IDs(
-            MS,
-            field_names=target_field_list,
-            scan_IDs=None,
-            to_UNIX=True,
-            ant1_ID=ant1_ID,
-            ant2_ID=ant2_ID,
-            close=False)
-
-    if timerange is not None:
-        # The format should be already checked when timerange was parsered
-        time_selection_start, time_selection_end = \
-            a_time.convert_casa_timerange_selection_to_unix_times(timerange)
-
-        selected_times = copy.deepcopy(a_time.subselect_timerange_from_times_array(
-            times, start_time=time_selection_start, end_time=time_selection_end))
-
-    else:
-        selected_times = copy.deepcopy(times)
-
-    del times
-
-    # Close MS
-    ms_wrapper.close_MS_table_object(MS)
-
-    # This case is only if the selected timerange is smaller than the
-    # visibility sampling interval
-    if np.size(selected_times) == 0:
-        raise ValueError(
-            'No OTF pointing matches the data selection criteria!')
-
-    # Reading in the pointing reference file (existence already checked)
-    pointing_times = putil.get_times_from_reference_pointing_file(
-        pointing_ref_path)
-
-    # Generate selected-only values from the pointing array
-    if timerange is not None:
-        selected_pointing_times = copy.deepcopy(
-            a_time.subselect_timerange_from_times_array(
-                pointing_times,
-                start_time=time_selection_start,
-                end_time=time_selection_end))
-
-    else:
-        selected_pointing_times = copy.deepcopy(pointing_times)
-
-    # Now get the cross matching
-    cross_matched_reference_times = a_time.time_arrays_injective_intersection(
-        selected_pointing_times,
-        selected_times,
-        quick_subselect=False,
-        threshold=time_crossmatch_threshold)
-
-    del selected_pointing_times, selected_times
-
-    # TO DO: fix this log message
-    if np.size(cross_matched_reference_times) == 0:
-        raise ValueError('No valid OTF pointing selection can be made!')
-
-    logger.info('{0:d} OTF pointings are selected...'.format(
-        np.size(cross_matched_reference_times)))
-
-    # === Configure output and garbage collection
-    logger.debug('Configuring output and garbage collection...')
-
-    OTF_acronym, MS_outname, deep_clean = putil.get_otfms_output_variables(
-        args.config_file)
 
     # === Create pipeline
     logger.info('Building Snakemake pipeline...')
@@ -439,69 +278,10 @@ def main():
         # NOTE: I only using spaces and not tabs as in YAML they should not be mixed!
         # I also not using the yaml module...
 
-        sconfig.write("# Config file for 'otfms' pipeline Snakefile generated by arcane_suite at {0:s}\n".format(
+        sconfig.write("# Config file for 'isaac' pipeline Snakefile generated by arcane_suite at {0:s}\n".format(
             str(datetime.datetime.now())))
 
-        sconfig.write('working_dir:\n  {0:s}\n'.format(
-            working_dir))
-        sconfig.write('output_dir:\n  {0:s}\n'.format(
-            os.path.join(working_dir, 'results')))
-        sconfig.write('blob_dir:\n  {0:s}\n'.format(
-            os.path.join(working_dir, 'blob')))
-        sconfig.write('log_dir:\n  {0:s}\n'.format(
-            os.path.join(working_dir, 'logs')))
-        sconfig.write('reports_dir:\n  {0:s}\n'.format(
-            os.path.join(working_dir, 'reports')))
-        sconfig.write('log_level:\n  {0:s}\n'.format(log_level))
-        sconfig.write('MS:\n  {0:s}\n'.format(
-            MS_path))
-        sconfig.write('pointing_ref:\n  {0:s}\n'.format(
-            pointing_ref_path))
-        sconfig.write("OTF_acronym:  '{0:s}'\n".format(
-            OTF_acronym))
-        sconfig.write("MS_outname:  '{0:s}'\n".format(
-            MS_outname))
-        sconfig.write('time_crossmatch_threshold:  {0:.8f}\n'.format(
-            time_crossmatch_threshold))
-        sconfig.write('split_timedelta:  {0:.8f}\n'.format(
-            split_timedelta))
-        sconfig.write('position_crossmatch_threshold:  {0:.8f}\n'.format(
-            position_crossmatch_threshold))
-        sconfig.write("casa_alias:  '{0:s}'\n".format(
-            command_line_tool_alias_dict['casa_alias']))
-        sconfig.write("chgcentre_alias:  '{0:s}'\n".format(
-            command_line_tool_alias_dict['chgcentre_alias']))
-        sconfig.write(
-            'deep_clean: {0:s}\n'.format(
-                str(deep_clean)))
-
-        # === List of calibrators and target fields
-
-        # Calibrator field(s)
-        sconfig.write(
-            'split_calibrators: {0:s}\n'.format(
-                str(split_calibrators)))
-
-        if split_calibrators:
-            sconfig.write('calibrator_fields:\n')
-            for i in range(0, np.size(calibrator_list)):
-                sconfig.write("  - {0:s}\n".format(calibrator_list[i]))
-        else:
-            sconfig.write('calibrator_fields:\n')
-
-        # Target field(s)
-        sconfig.write('target_fields:\n')
-        for i in range(0, np.size(target_field_list)):
-            sconfig.write("  - '{0:s}'\n".format(target_field_list[i]))
-
-        # Build field_ID dict
-        sconfig.write('otf_field_ID_mapping:\n')
-        for i in range(0, np.size(cross_matched_reference_times)):
-            sconfig.write(
-                "  '{0:d}' : {1:f}\n".format(
-                    i, cross_matched_reference_times[i]))
-
-    # === Test if build was succesfull ===
+    # === Test if build was successful ===
     if not args.skip_snakemake_check:
         logger.info('Testing pipeline setup via dry run...')
 
