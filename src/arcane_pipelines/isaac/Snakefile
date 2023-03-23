@@ -52,3 +52,9 @@ import numpy as np
 
 #=== Configuration ===
 configfile: "config.yaml"
+
+#Getting values from the config file
+workdir: config['working_dir']
+
+#Aliases
+CARACAL_alias = config['caracal_alias']
