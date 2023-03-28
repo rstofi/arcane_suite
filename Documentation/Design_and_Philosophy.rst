@@ -131,37 +131,37 @@ Library structure
 Somekind of a minimalistic map for the library:
 
 ```
-arcane_suite/
-	|
-	--Documentation/
-	|	|
-	|	# all the documentation sits here
-	|
-	--Testing/
-	|	|
-	|	# all testing sits here
-	|
-	------src/
-	|	|
-	|	--arcane_pipelines/
-	|	|	|
-	|	|	# all pipelines live here in a separate directory
-	|	|
-	|	--arcane_utils/
-	|	|	|
-	|	|	# all the modules live here, each mdule in a separate file
-	|	|
-	|	--arcane_tools/
-	|	|	|
-	|	|	# all tools are here, each in a separate file
-	|	|
-	|	--arcane_apps/
-	|	|	|
-	|	|	# I plan to put here all the code that creates and manages command-line applications
-	|
-	--Containers
-	|	|
-	|	# I plan to put here configuration files for containers
+	--arcane_suite/
+		|
+		--Documentation/
+		|	|
+		|	# all the documentation sits here
+		|
+		--Testing/
+		|	|
+		|	# all testing sits here
+		|
+		------src/
+		|	|
+		|	--arcane_pipelines/
+		|	|	|
+		|	|	# all pipelines live here in a separate directory
+		|	|
+		|	--arcane_utils/
+		|	|	|
+		|	|	# all the modules live here, each mdule in a separate file
+		|	|
+		|	--arcane_tools/
+		|	|	|
+		|	|	# all tools are here, each in a separate file
+		|	|
+		|	--arcane_apps/
+		|	|	|
+		|	|	# I plan to put here all the code that creates and manages command-line applications
+		|
+		--Containers
+		|	|
+		|	# I plan to put here configuration files for containers
 ```
 
 

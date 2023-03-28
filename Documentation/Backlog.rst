@@ -26,7 +26,8 @@ Bugs and issues, I am aware and should fix, but are not currently affecting the 
 
     - handeling empty calibrator fields list in ``otfms``
     - sub-optimal calls to run ``CASA`` tasks in the ``otfms`` pipeline
-
+    - the ``Library structure`` is not displayed correctly on GithuB
+    
 Goals for version update
 ------------------------
 
