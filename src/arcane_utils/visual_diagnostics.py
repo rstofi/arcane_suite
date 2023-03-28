@@ -92,7 +92,7 @@ def create_field_ID_RA_Dec_plot(mspath:str,
     Creates a plot
     """
 
-    logger.info("Creating field IDs Ra--Dec plot with ID displyay threshold {0:s}".format(
+    logger.info("Creating field IDs Ra--Dec plot with ID displyay threshold {0:d}".format(
             display_new_IDs_treshold))
 
     # Get the phase centres and ID's from the MS
