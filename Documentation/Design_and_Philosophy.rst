@@ -55,14 +55,14 @@ This environment renders the average user unable to use custom solutions and som
 
 To be able to write scaleable and easy-to deploy pipelines, I aim to implement a wrapper around existing code, with (hopefully) options for customizing both the workflow deployment and the parameters of the software used. However, the pipelines included in ``arcane_suite`` are still focused to do a single thing. While, some pipelines can be quite general, ``arcane_suite`` is not a one-fit-for-all solution. It would be hypocritical to say so. It is simply just another pipeline framework, with pre-defined pipelines. I guess, the difference here is that I am the black-belt when new pipelines need to be made with ``arcane_suite``...
 
-Nonetheless, the approach to use a 3rd party workflow manager to deploy various pipelines, which were traditionally deployed by either using a *single* software (with sometimes limited parallelization) or via hand-crafted and so not re-usable pipelines is a **new approach** in this field.
+Nonetheless, the approach to use a 3rd party workflow manager to deploy various pipelines, which were traditionally deployed by either using a *single* software (with sometimes limited palatalization) or via hand-crafted and so not re-usable pipelines is a **new approach** in this field.
 
 An approach that can help to develop new, quirky pipelines, which, indeed I try to do as science...
 
 Building on existing tools
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The aim of ``arcane_suite`` is not to reinvent the wheel, but to use existing software as much as possible. Especially in pipelines that need to scale. The goal is to spend the minimal amount of time on the well-established (but sometimes core) steps in radio astronomy research and rather focus on developing small non-existent *unique* features (and some personal analytic routines). Therefore, most code should aim to provide a comfortable wrapper environment for the various 3rd party software. This approach should enable the relatively easy addition or change of the software used in the pipelines. These wrappers ideally make use of *template* configuration files for the underlying code, with only a few selected parameters -- neeed to run the pipeline via ``arcane_suite`` -- are exposed in the ``arcane_suite`` config files. However, the user *should* have more control over the underlying code, by hand-crafting the template files.
+The aim of ``arcane_suite`` is not to reinvent the wheel, but to use existing software as much as possible. Especially in pipelines that need to scale. The goal is to spend the minimal amount of time on the well-established (but sometimes core) steps in radio astronomy research and rather focus on developing small non-existent *unique* features (and some personal analytic routines). Therefore, most code should aim to provide a comfortable wrapper environment for the various 3rd party software. This approach should enable the relatively easy addition or change of the software used in the pipelines. These wrappers ideally make use of *template* configuration files for the underlying code, with only a few selected parameters -- needed to run the pipeline via ``arcane_suite`` -- are exposed in the ``arcane_suite`` config files. However, the user *should* have more control over the underlying code, by hand-crafting the template files.
 
 Why ``Snakemake``?
 ~~~~~~~~~~~~~~~~~~
@@ -97,71 +97,54 @@ As such, each distinct functionality should be implemented only *once*. The inte
 Deployment
 ~~~~~~~~~~
 
-Since ``arcane_suite`` includes executable pipelines, tools and modules (each intended to be used differently), the deploynment of these components are quite different.
+Since ``arcane_suite`` includes executable pipelines, tools and modules (each intended to be used differently), the deployment of these components are quite different.
 
 The core functionality of this library is delivered as a Python *package*. Simply importing the required modules from ``arcane_suite`` makes the code usable in any Python-based code. Based on these core features, I built the __tools__ and __pipelines__.
 
-The pipelines are designed to be deployable, via *initialisation* scripts. For each pipeline, a custom ``*_init_*`` script is created that automaticaly sets up the ``Snakemake`` pipeline based on a config file, and possibly on template files. The idea is, to hide the ``Snakemake`` pipeline from a potential user, and make deploynment and development easy for me once the pipeline is created. Such an approach requires no knowledge of ``Snakemake`` from the (potential) users, or extensive interaction with ``Snakemake`` while developing/improving on the pipeline. This is possible since each pipeline is expected to perform a *specific* task. To achieve smooth deploynment, the ``Snakefiles`` are shipped with this package and are copied over to a ``working_directory``, in which the pipeline is executed. Therefore, each pipeline is deployed in a user-defined directory, by design.
+The pipelines are designed to be deployable, via *initialisation* scripts. For each pipeline, a custom ``*_init_*`` script is created that automaticaly sets up the ``Snakemake`` pipeline based on a config file, and possibly on template files. The idea is, to hide the ``Snakemake`` pipeline from a potential user, and make deployment and development easy for me once the pipeline is created. Such an approach requires no knowledge of ``Snakemake`` from the (potential) users, or extensive interaction with ``Snakemake`` while developing/improving on the pipeline. This is possible since each pipeline is expected to perform a *specific* task. To achieve smooth deployment, the ``Snakefiles`` are shipped with this package and are copied over to a ``working_directory``, in which the pipeline is executed. Therefore, each pipeline is deployed in a user-defined directory, by design.
 
-Tools are (intended to be) simple tasks running as command-line programs. These stand-alone tools are hand-selected to make *some* infrequently re-occuring calculations/tasks available when needed. 
+Tools are (intended to be) simple tasks running as command-line programs. These stand-alone tools are hand-selected to make *some* infrequently re-occuring calculations/tasks available when needed.
 
 
 Automated data inspection and analysis
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Any good pipeline *should* generate not only useful log files, but further analytics plots and files as well. While some of the pipelines use third-party software, which creates automated reports and analytics plots, some additional functionality is desired. As such, a *soft* development aim is to include qualitative and quantitative anayitics features in ``arcane_suite``. I intend to implement the most useful features as standalone tools, and if I feel useful, even a *basic* inspection pipeline for different levels of radio astronomy data. The long-term goal is to create *self-contained* reports, similar to, or rather compatible with ``radiopadre``.
+Any good pipeline *should* generate not only useful log files, but further analytic plots and files as well. While some of the pipelines use third-party software, which creates automated reports and analytic plots, some additional functionality is desired. As such, a *soft* development aim is to include qualitative and quantitative analytic features in ``arcane_suite``. I intend to implement the most useful features as standalone tools, and if I feel useful, even a *basic* inspection pipeline for different levels of radio astronomy data. The long-term goal is to create *self-contained* reports, similar to, or rather compatible with ``radiopadre``.
 
-Containerisation
+Containerization
 ----------------
 
-To meet the design goals of *reproducibility* and of *flexible deploynment*, I intend to provide config files for building containers for the pipelines and for ``arcane_suite`` itself. Ultimately, the goal would be to enable pipeline deploynment with *containerised* backed trough the ``*_init_*`` scripts. With such an approach, I or any potential user, can run this software on any hardware via containers, in an 'admin-free' way. This design filosophy is inspired from ``radiopadre``, and so I am also hoping to generate a 'client' library/script that can set up ``arcane_suite`` itself remotely to any machine. However, this is a minor design goal for the future.
+To meet the design goals of *reproducibility* and of *flexible deployment*, I intend to provide config files for building containers for the pipelines and for ``arcane_suite`` itself. Ultimately, the goal would be to enable pipeline deployment with *containerized* backed trough the ``*_init_*`` scripts. With such an approach, I or any potential user, can run this software on any hardware via containers, in an 'admin-free' way. This design philosophy is inspired from ``radiopadre``, and so I am also hoping to generate a 'client' library/script that can set up ``arcane_suite`` itself remotely to any machine. However, this is a minor design goal for the future.
 
 Documentation and testing
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 I aim to use `semantic versioning <https://semver.org/>`_ to indicate the backwards compatibility and functionality. I plan to have release notes for major releases.
 
-As mentioned above, the main goal for the documentation is to assist future me with the usage/development of the code in the future. That is, I plan to provide only a high-level documentation formatted to be displayed on `the GitHub page <https://github.com/rstofi/arcane_suite/>`_. While it would be easy to generate a dedicated site for the documentation, I find this approach both sufficient and convenient for me. Consequently, the underlying code is *only* documented in-line. For individual pipelines and tools, I inted to add some kind of ``manual`` that can be read in the command line with more detailed description. However, the documentation of individual *functions* and *objects* are only needed for the developers, who *should* be able to learn the code and find they way around. This is maybe only me, but this is a *personal* code library after all...
+As mentioned above, the main goal for the documentation is to assist future me with the usage/development of the code in the future. That is, I plan to provide only a high-level documentation formatted to be displayed on `the GitHub page <https://github.com/rstofi/arcane_suite/>`_. While it would be easy to generate a dedicated site for the documentation, I find this approach both sufficient and convenient for me. Consequently, the underlying code is *only* documented in-line. For individual pipelines and tools, I intend to add some kind of ``manual`` that can be read in the command line with more detailed description. However, the documentation of individual *functions* and *objects* are only needed for the developers, who *should* be able to learn the code and find they way around. This is maybe only me, but this is a *personal* code library after all...
 
-Testing is sadly, a heavily neglected part of scientific libraries. In particular, of data-driven code. I plan to ever increase the testing coverage of ``arcane_suite``, I am not a hypocrit. Testing is low on my priority list. Especially, the tricky task of testing code interacting with radio astronomy-specific data, such as MS. While, the code *is* tested during development, I am happy to fix any bug reported. Known issues and ugs are listed in the `backlog <https://github.com/rstofi/arcane_suite/blob/main/Documentation/Backlog.rst>`_ page, together with some *current* development hurdles. I choose this solution to avoid having a conversation with myself on the dedicated `issues <https://github.com/rstofi/arcane_suite/issues`_ page... but I would prefer if contributurs would report issues and start discussions there.
+Testing is sadly, a heavily neglected part of scientific libraries. In particular, of data-driven code. I plan to ever increase the testing coverage of ``arcane_suite``, I am not a hypocrite. Testing is low on my priority list. Especially, the tricky task of testing code interacting with radio astronomy-specific data, such as MS. While, the code *is* tested during development, I am happy to fix any bug reported. Known issues and bugs are listed in the `backlog <https://github.com/rstofi/arcane_suite/blob/main/Documentation/Backlog.rst>`_ page, together with some *current* development hurdles. I choose this solution to avoid having a conversation with myself on the dedicated `issues <https://github.com/rstofi/arcane_suite/issues>`_ page... but I would prefer if contributors would report issues and start discussions there.
 
 Library structure
 -----------------
 
-Somekind of a minimalistic map for the library:
+Some-kind of a minimalist map for the library:
 
-```
-	--arcane_suite/
-		|
-		--Documentation/
-		|	|
-		|	# all the documentation sits here
-		|
-		--Testing/
-		|	|
-		|	# all testing sits here
-		|
-		------src/
-		|	|
-		|	--arcane_pipelines/
-		|	|	|
-		|	|	# all pipelines live here in a separate directory
-		|	|
-		|	--arcane_utils/
-		|	|	|
-		|	|	# all the modules live here, each mdule in a separate file
-		|	|
-		|	--arcane_tools/
-		|	|	|
-		|	|	# all tools are here, each in a separate file
-		|	|
-		|	--arcane_apps/
-		|	|	|
-		|	|	# I plan to put here all the code that creates and manages command-line applications
-		|
-		--Containers
-		|	|
-		|	# I plan to put here configuration files for containers
-```
+| arcane_suite/
+|   ├── Documentation/
+|       └── # all the documentation sits here
+|   ├──Testing/
+|       └── # all testing sits here
+|   ├── src/
+|       ├── arcane_pipelines/
+|           └── # all pipelines live here in a separate directory
+|       ├── arcane_utils/
+|           └── # all the modules live here, each mdule in a separate file
+|       ├── arcane_tools/
+|           └── # all tools are here, each in a separate file
+|       └── arcane_apps/
+|           └── # I plan to put here all the code that creates and manages command-line applications
+|   └── Containers
+|           └── # I plan to put here configuration files for containers
 
 

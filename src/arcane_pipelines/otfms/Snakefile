@@ -43,11 +43,13 @@ output also shown):
     |
     -- .snakemake/ #Hidden directory created by snakemake for pipeline handling
 
-NOTE: this pipeline requires double (!) the input MS size
+NOTE: this pipeline requires triple (!) the input MS size
 
 To visualise the pipeline logic run the following command under the working directory:
 
     snakemake --rulegraph | dot -Tpdf > arcane_otfms_rule_graph.pdf
+
+NOTE: this should be done during the *init* phase...
 
 """
 import os
@@ -57,8 +59,6 @@ import numpy as np
 configfile: "config.yaml"
 
 #Getting values from the config file
-workdir: config['working_dir']
-
 WORKING_dir = config['working_dir'] #Don't need this explicitly
 MS_dir = config['MS']
 POINTING_REF_file = config['pointing_ref']
@@ -157,7 +157,7 @@ if bool(config['split_calibrators']):
     #Merge phase-rotated OTF pointings and the calibrator(s)
 
     #NOTE: this needs to be in a different rule from ``merge_otf_pointings`` due to
-    # the difference in the input patrameters, and I cannot put the input statement
+    # the difference in the input patrameters, and I cannot put the if statement
     # into the input statement...
 
     #TO DO: maybe define a template rule for merging ?

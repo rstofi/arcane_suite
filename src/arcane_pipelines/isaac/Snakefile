@@ -1,12 +1,12 @@
-"""Sankefile for the arcane_cias pipeline. Each rule calls a custom command-line application
-with the name `arcane_cias_rule_name_in_this_snakefile`
+"""Sankefile for the arcane_isaac pipeline. Each rule calls a custom command-line application
+with the name `arcane_isaac_rule_name_in_this_snakefile`
 
-Some rules are only a simple wrapper around casa tasks, but some are doing more
+Some rules are only a simple wrapper around caracal tasks, but some are doing more
 than calling task from some library.
 
 For more info on the individual rules, see the correspondig python scripts!
 
-The arcane_cias pipleine builds the following file structure (with the pipeline
+The arcane_isaac pipleine builds the following file structure (with the pipeline
 output also shown):
 
     working_dir/
@@ -17,9 +17,7 @@ output also shown):
     |
     -- results/ #The main results from the pipeline goes here
     |   |
-    |    -- final.ms #The OTF format MS => this one is created here
-    |   |
-    |    -- otf_field_names.dat #The file containing the OTF indices and field names
+    |    -- ??? #Not sure what, exactly
     |
     -- logs/
     |   |
@@ -31,20 +29,15 @@ output also shown):
     |   |
     |   -- analytics plots
     |
-    -- blob/ #This directory might be entirely purged at the end of the pipeline completion
-    |   |
-    |   -- calibrators.ms #The claibrators if the split is enabled
-    |   |
-    |   -- otf_pointing_no_0.ms
-    |   |
-    |   ...
-    |   |
-    |   -- otf_pointing_no_N.ms
+    -- ???/ #The rest of the directory structure is someting to be figured out
     |
     -- .snakemake/ #Hidden directory created by snakemake for pipeline handling
 
+To visualise the pipeline logic run the following command under the working directory:
 
     snakemake --rulegraph | dot -Tpdf > arcane_cias_rule_graph.pdf
+
+NOTE: this should be done during the *init* phase...
 
 """
 import os
@@ -54,7 +47,53 @@ import numpy as np
 configfile: "config.yaml"
 
 #Getting values from the config file
-workdir: config['working_dir']
+WORKING_dir = config['working_dir'] #Don't need this explicitly
+OUTPUT_dir = config['output_dir']
+LOG_dir = config['log_dir']
+REPORTS_dir = config['reports_dir']
+BLOB_dir = config['blob_dir']
 
 #Aliases
 CARACAL_alias = config['caracal_alias']
+
+#Mappings
+ID_AND_MS_PATH_MAPPING = config['ID_and_MS_path_mapping']
+
+#print(type(ID_AND_MS_PATH_MAPPING))
+#print(ID_AND_MS_PATH_MAPPING)
+
+#=== Rules ===
+rule all:
+    input:
+        '{0:s}/imaging.done'.format(OUTPUT_dir)
+
+rule prepare_caracal_working_dir:
+    input:
+        ['{0:s}'.format(v) for v in ID_AND_MS_PATH_MAPPING.values()] #This is all the input directories
+    output:
+        directory('{0:s}'.format(BLOB_dir) +\
+            '/caracal_working_dir_no_{field_ID}')
+        #'{0:s}/imaging.done'.format(OUTPUT_dir)
+    params:
+        blob_dir = BLOB_dir,
+        #ms_name_from_map = ID_AND_MS_PATH_MAPPING[{field_ID}]
+        ms_name_from_map = '{field_ID}'
+    #run:
+    #    print({params.ms_name_from_map})
+    #    print(ID_AND_MS_PATH_MAPPING[params.ms_name_from_map])
+    shell:
+        "mkdir {params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID} && " +\
+        "touch {params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID}/image_setiup.txt ; " +\
+        "echo 'MS path: {wildcards.field_ID}\n' > " +\
+        "{params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID}/image_setiup.txt ; " +\
+        "echo 'Data ID: {wildcards.field_ID}' > " +\
+        "{params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID}/image_setiup.txt"
+
+rule run_caracal:
+    input:
+        expand('{0:s}'.format(BLOB_dir) +\
+            '/caracal_working_dir_no_{field_ID}', field_ID=list(ID_AND_MS_PATH_MAPPING.keys()))
+    output:
+         '{0:s}/imaging.done'.format(OUTPUT_dir)
+    shell:
+        'touch {0:s}/imaging.done'.format(OUTPUT_dir)

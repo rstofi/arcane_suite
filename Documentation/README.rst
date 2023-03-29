@@ -6,8 +6,10 @@ Arbitrary Radio astronomiCAl pipeliNE suite (arcane_suite)
 The main ``arcane_suite`` components are:
 
 * `Pipelines`_
+* `Utils (Modules)`_
 * `Tools`_
-* `Modules`_
+* `Apps`_
+
 
 Pipelines
 ---------
@@ -21,14 +23,19 @@ TO DO: add a short description to where the pipeline-specific code is stored
 
 TO DO: add a list starting with the otfms pipeline and initialize its documentation
 
+Utils (Modules)
+---------------
+
+TO DO: describe the utility libraries used
+
 Tools
 -----
 
 TO DO: describe the planned tools
 
+Apps
+----
 
-Modules
--------
+TO DO: describe the planned apps
 
-TO DO: describe the utility libraries used
 
