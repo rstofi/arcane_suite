@@ -35,7 +35,7 @@ output also shown):
 
 To visualise the pipeline logic run the following command under the working directory:
 
-    snakemake --rulegraph | dot -Tpdf > arcane_cias_rule_graph.pdf
+    snakemake --rulegraph | dot -Tpdf > arcane_isaac_rule_graph.pdf
 
 NOTE: this should be done during the *init* phase...
 
@@ -62,6 +62,9 @@ ID_AND_MS_PATH_MAPPING = config['ID_and_MS_path_mapping']
 #print(type(ID_AND_MS_PATH_MAPPING))
 #print(ID_AND_MS_PATH_MAPPING)
 
+#To avoid ambiguity in wildcards, use the keys only
+FIELD_IDs = list(ID_AND_MS_PATH_MAPPING.keys())
+
 #=== Rules ===
 rule all:
     input:
@@ -69,11 +72,13 @@ rule all:
 
 rule prepare_caracal_working_dir:
     input:
-        ['{0:s}'.format(v) for v in ID_AND_MS_PATH_MAPPING.values()] #This is all the input directories
+        ['{0:s}'.format(v) for v in ID_AND_MS_PATH_MAPPING.values()] #This is all the input MS directories
     output:
-        directory('{0:s}'.format(BLOB_dir) +\
-            '/caracal_working_dir_no_{field_ID}')
+        #'{0:s}'.format(BLOB_dir) +\
+        #    '/caracal_working_dir_no_{field_ID}/image_setup.txt'
         #'{0:s}/imaging.done'.format(OUTPUT_dir)
+        '{0:s}'.format(BLOB_dir) +\
+            '/caracal_working_dir_no_{field_ID}/caracal.done'
     params:
         blob_dir = BLOB_dir,
         #ms_name_from_map = ID_AND_MS_PATH_MAPPING[{field_ID}]
@@ -82,17 +87,25 @@ rule prepare_caracal_working_dir:
     #    print({params.ms_name_from_map})
     #    print(ID_AND_MS_PATH_MAPPING[params.ms_name_from_map])
     shell:
-        "mkdir {params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID} && " +\
-        "touch {params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID}/image_setiup.txt ; " +\
-        "echo 'MS path: {wildcards.field_ID}\n' > " +\
-        "{params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID}/image_setiup.txt ; " +\
-        "echo 'Data ID: {wildcards.field_ID}' > " +\
-        "{params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID}/image_setiup.txt"
+        "mkdir {params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID} ; " +\
+        "echo 'Field ID used: {wildcards.field_ID}\n' > " +\
+        "{params.blob_dir}/caracal_working_dir_no_{wildcards.field_ID}/image_setup.txt"
 
 rule run_caracal:
     input:
+        '{0:s}'.format(BLOB_dir) +\
+            '/caracal_working_dir_no_{field_ID}/image_setup.txt'
+    output:
+         '{0:s}'.format(BLOB_dir) +\
+            '/caracal_working_dir_no_{field_ID}/caracal.doneA'
+    shell:
+        'touch {0:s}'.format(BLOB_dir) +\
+            '/caracal_working_dir_no_{field_ID}/caracal.done'
+
+rule collect_images:
+    input:
         expand('{0:s}'.format(BLOB_dir) +\
-            '/caracal_working_dir_no_{field_ID}', field_ID=list(ID_AND_MS_PATH_MAPPING.keys()))
+            '/caracal_working_dir_no_{field_ID}/caracal.done', field_ID=list(ID_AND_MS_PATH_MAPPING.keys()))
     output:
          '{0:s}/imaging.done'.format(OUTPUT_dir)
     shell:

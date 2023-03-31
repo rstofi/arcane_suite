@@ -77,6 +77,12 @@ Using some sort of workflow manager is a *must* to build scaleable pipelines tha
 
 Nonetheless, using ``Snakemake`` is still a somewhat *arbitrary* choice that I made based on previous experience and personal preference...
 
+
+**M single ID parallelism approach in ``Snakemake``**
+
+This is somewhat a side-note, but an important one. My approach in designing pipelines is to use a single ID for each parallel process. While the parallel part could consist of a combination of input parameters, by using a single ID in such parallel steps, this makes the tasks manageable on the ``Snakefile`` level. This means that some tasks might need to figure out various parameters based on the ID given. This should be no problem, as long as the ID is linked to the appropriate parameters, via lists in the config file. The correct setup of the config file is done by ``*_init`` files (see below). Therefore, everything *should* be internally consistent for each pipeline.
+
+
 Modularity and internal consistency
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -112,7 +118,7 @@ Automated data inspection and analysis
 Any good pipeline *should* generate not only useful log files, but further analytic plots and files as well. While some of the pipelines use third-party software, which creates automated reports and analytic plots, some additional functionality is desired. As such, a *soft* development aim is to include qualitative and quantitative analytic features in ``arcane_suite``. I intend to implement the most useful features as standalone tools, and if I feel useful, even a *basic* inspection pipeline for different levels of radio astronomy data. The long-term goal is to create *self-contained* reports, similar to, or rather compatible with ``radiopadre``.
 
 Containerization
-----------------
+~~~~~~~~~~~~~~~~
 
 To meet the design goals of *reproducibility* and of *flexible deployment*, I intend to provide config files for building containers for the pipelines and for ``arcane_suite`` itself. Ultimately, the goal would be to enable pipeline deployment with *containerized* backed trough the ``*_init_*`` scripts. With such an approach, I or any potential user, can run this software on any hardware via containers, in an 'admin-free' way. This design philosophy is inspired from ``radiopadre``, and so I am also hoping to generate a 'client' library/script that can set up ``arcane_suite`` itself remotely to any machine. However, this is a minor design goal for the future.
 
@@ -145,6 +151,6 @@ Some-kind of a minimalist map for the library:
 |       └── arcane_apps/
 |           └── # I plan to put here all the code that creates and manages command-line applications
 |   └── Containers
-|           └── # I plan to put here configuration files for containers
+|           └── # I plan to put here configuration files for containers, each in a separate directory
 
 
