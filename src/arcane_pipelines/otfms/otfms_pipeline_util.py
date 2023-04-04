@@ -2,9 +2,9 @@
 """
 
 __all__ = [
+    'generate_config_template_for_otfms',
     'get_otfms_data_variables',
     'get_otfms_data_selection_from_config',
-    'init_config_for_otfms',
     'get_times_from_reference_pointing_file',
     'get_pointing_from_reference_pointing_file',
     'get_pointing_and_times_from_reference_pointing_file',
@@ -34,10 +34,10 @@ logger = logging.getLogger(__name__)
 # === Functions ===
 
 
-def init_config_for_otfms(
-        template_path:str,
-        overwrite:bool=True,
-        create_template:bool=False):
+def generate_config_template_for_otfms(
+        template_path: str,
+        overwrite: bool = True,
+        create_template: bool = False):
     """Generate an empty config file for the *otfms* pipeline. The resultant file
     can be filled by hand, to actually create an usable pipeline.
 
@@ -71,7 +71,7 @@ def init_config_for_otfms(
         unique_defaults_dict=otfms_defaults._otfms_default_config_dict)
 
 
-def get_otfms_data_variables(config_path:str):
+def get_otfms_data_variables(config_path: str):
     """Read the environmental variables unique to initalise the otfms pipeline
 
     Parameters
@@ -122,7 +122,9 @@ def get_otfms_data_variables(config_path:str):
     return MS_dir, pointing_ref, split_calibrators
 
 
-def get_otfms_data_selection_from_config(config_path:str, split_calibrators:bool=False):
+def get_otfms_data_selection_from_config(
+        config_path: str,
+        split_calibrators: bool = False):
     """Reads the data selection for the OTF to MS conversion from the config file:
 
     In the config file the targets MUST be specifyed, and if we awant to split the
@@ -226,7 +228,7 @@ def get_otfms_data_selection_from_config(config_path:str, split_calibrators:bool
         # Check if calibrators are not defined
         if len(calibrator_list) == 1 and calibrator_list[0] == '':
             raise ValueError(
-                "Missing mandatory parameter (based on 'split_calibrators' = true): 'calibrator_list'")
+                "Missing mandatory parameter (based on 'split_calibrators' = True): 'calibrator_list'")
     else:
         calibrator_list = []  # Return empty list
 
@@ -391,7 +393,7 @@ def get_otfms_data_selection_from_config(config_path:str, split_calibrators:bool
         time_crossmatch_threshold, split_timedelta, position_crossmatch_threshold
 
 
-def get_otfms_output_variables(config_path:str):
+def get_otfms_output_variables(config_path: str):
     """Get the unique OUTPUT parameters defined in the config file
 
 
@@ -458,7 +460,7 @@ def get_otfms_output_variables(config_path:str):
     return OTF_acronym, MS_outname, deep_clean
 
 
-def get_times_from_reference_pointing_file(refrence_pointing_npz:str):
+def get_times_from_reference_pointing_file(refrence_pointing_npz: str):
     """Get the `time` array from the reference antenna pointing
     file. The file should be a numpy-generated .npz binary file (not pickled though!)
 
@@ -486,7 +488,7 @@ def get_times_from_reference_pointing_file(refrence_pointing_npz:str):
     return time_array
 
 
-def get_pointing_from_reference_pointing_file(refrence_pointing_npz:str):
+def get_pointing_from_reference_pointing_file(refrence_pointing_npz: str):
     """et the `ra` and `dec` arrays from the reference antenna pointing
     file. The file should be a numpy-generated .npz binary file (not pickled though!)
 
@@ -545,7 +547,7 @@ def get_pointing_and_times_from_reference_pointing_file(refrence_pointing_npz):
     return time_array, ra_array, dec_array
 
 
-def get_closest_pointing_from_yaml(yaml_path:str, otf_ID:str):
+def get_closest_pointing_from_yaml(yaml_path: str, otf_ID: str):
     """A core function used in multiple tasks in the `otfms` pipeline.
 
     Basically based on the Snakemake yaml file, and an OTF field ID the closest
@@ -612,7 +614,10 @@ def get_closest_pointing_from_yaml(yaml_path:str, otf_ID:str):
     return time_centre, ra_centre[0], dec_centre[0]
 
 
-def generate_OTF_names_from_ra_dec(ra:float, dec:float, acronym:str='OTFasp'):
+def generate_OTF_names_from_ra_dec(
+        ra: float,
+        dec: float,
+        acronym: str = 'OTFasp'):
     """Generate a string useful for renaming the OTF pointings, based on the
     field cenral coordinates (RA, Dec, J2000, ICRS)
 
@@ -668,7 +673,7 @@ def generate_OTF_names_from_ra_dec(ra:float, dec:float, acronym:str='OTFasp'):
     return name_string
 
 
-def generate_position_string_for_chgcentre(ra:float, dec:float):
+def generate_position_string_for_chgcentre(ra: float, dec: float):
     """Generate a string that `chgcentre` can read from RA and Dec coordinates
 
     Parameters

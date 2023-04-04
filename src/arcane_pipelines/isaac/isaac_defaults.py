@@ -8,16 +8,44 @@ from arcane_utils.globals import _SNAKEMAKE_BASE_NAME, _CARACAL_BASE_NAME
 # used by the pipeline
 
 _isaac_default_aliases = ['snakemake_alias',
-                            'caracal_alias']
+                          'caracal_alias']
 
 _isaac_default_alias_values = [_SNAKEMAKE_BASE_NAME,
-                                _CARACAL_BASE_NAME]
+                               _CARACAL_BASE_NAME]
 
 # Define the default values of the config file
-_isaac_default_config_dict = {'ENV': {
-},
-    'DATA': {
-    'DATA_ID': ['', True, 'the MS name (with no extension)']},  # 9"
+_isaac_default_config_dict = {
+    'ENV': {},
+    'DATA_CONFIG': {
+        'from_otfms': [
+            'False',
+            True,
+            'if True, the input is generated from the output of an OTFMS pipeline'],
+        'otfms_output_path': [
+            '',
+            False,
+            'absolute path, requried if from_otfms is set to True'],
+        'otfms_acronym': [
+            '',
+            False,
+            'string (same as the OTF_acronym used to generate the data)']},
+    'DATA_IDs': {
+        'data_ID_0 ': [
+            '',
+            True,
+            'data ID string (field name in MS)']},
+    'MS_PATHS': {
+        'MS_path_0': [
+            '',
+            True,
+            'absolute path']},
+    'CALTABLE_PATHS': {
+        'caltable_path_0': [
+            '',
+            True,
+            'absolute path to the callib solutions']},
     'OUTPUT': {
-    'OTF_acronym': ['OTFasp', True, 'string']
-}}
+        'image_acronym': [
+            'isaac',
+            True,
+            'string']}}

@@ -50,14 +50,15 @@ logger = logging.getLogger(__name__)
 
 # === Functions ===
 
-def create_field_ID_RA_Dec_plot(mspath:str,
-                                otf_fig_path:str,
-                                ptitle:str="Phase centres (with field ID's)",
-                                field_ID_list:list=None,
-                                display_new_IDs_treshold:int=100,
-                                ant1_ID:int=0,
-                                ant2_ID:int=1,
-                                close:bool=False):
+def create_field_ID_RA_Dec_plot(
+        mspath: str,
+        otf_fig_path: str,
+        ptitle: str = "Phase centres (with field ID's)",
+        field_ID_list: list = None,
+        display_new_IDs_treshold: int = 100,
+        ant1_ID: int = 0,
+        ant2_ID: int = 1,
+        close: bool = False):
     """
     NOTE: This docstring was created by ChatGPT3.
 
@@ -93,7 +94,7 @@ def create_field_ID_RA_Dec_plot(mspath:str,
     """
 
     logger.info("Creating field IDs Ra--Dec plot with ID displyay threshold {0:d}".format(
-            display_new_IDs_treshold))
+        display_new_IDs_treshold))
 
     # Get the phase centres and ID's from the MS
     phase_centre_ID_dict = ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(

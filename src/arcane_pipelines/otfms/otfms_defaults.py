@@ -29,11 +29,12 @@ _otfms_default_config_dict = {'ENV': {
     'timerange': ['', False, 'CASA-style timerange or none'],
     'ant1_ID': ['0', False, 'int or none'],
     'ant2_ID': ['1', False, 'int or none'],
-    'time_crossmatch_threshold': ['0.001', False, 'float or none'],
+    'time_crossmatch_threshold': ['0.001', False, 'float or none'],  # sec
     'split_timedelta': ['0.5', False, 'float or none'],
     'position_crossmatch_threshold': ['0.0025', False, 'float or none']},  # 9"
     'OUTPUT': {
-    'OTF_acronym': ['OTFasp', True, 'string'],
+    'OTF_acronym': ['otfms', True, 'string'],
+    'skip_merge': ['False', True, 'boolean'],
     'MS_outname': ['final', True, 'string (without the .ms extension)'],
     'deep_clean': ['False', False, 'boolean']
 }}

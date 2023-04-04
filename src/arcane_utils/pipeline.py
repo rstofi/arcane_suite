@@ -1,4 +1,10 @@
 """Collection of utility functions general to initializing and handling pipelines
+
+NOTE: `configparser` has no close() method, so in each function I need to open the
+    parset file...
+
+see: https://stackoverflow.com/questions/990867/closing-file-opened-by-configparser
+
 """
 
 __all__ = [

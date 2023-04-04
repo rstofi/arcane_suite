@@ -168,10 +168,11 @@ def main():
             'Creating template config file for *isaac* pipeline from arcane_suite')
 
         if not args.overwrite_lock:
-            putil.init_config_for_otfms(template_path=args.config_file)
+            putil.generate_config_template_for_isaac(
+                template_path=args.config_file)
         else:
-            putil.init_config_for_otfms(template_path=args.config_file,
-                                        overwrite=False)
+            putil.generate_config_template_for_isaac(
+                template_path=args.config_file, overwrite=False)
 
         # TNow halt the program
         sys.exit(0)
@@ -247,7 +248,7 @@ def main():
                 'Overwriting Sankefile and coinfig file under {0:s}'.format(working_dir))
             # Because the files under `working_dir` will be overwritten
 
-    #=== Need to check for input data here!
+    # === Need to check for input data here!
 
     # Add checks here for the Snakefile if exists
     snakefile_path = os.path.join(

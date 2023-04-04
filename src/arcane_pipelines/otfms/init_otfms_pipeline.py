@@ -168,10 +168,11 @@ def main():
             'Creating template config file for *otfms* pipeline from arcane_suite')
 
         if not args.overwrite_lock:
-            putil.init_config_for_otfms(template_path=args.config_file)
+            putil.generate_config_template_for_otfms(
+                template_path=args.config_file)
         else:
-            putil.init_config_for_otfms(template_path=args.config_file,
-                                        overwrite=False)
+            putil.generate_config_template_for_otfms(
+                template_path=args.config_file, overwrite=False)
 
         # TNow halt the program
         sys.exit(0)
