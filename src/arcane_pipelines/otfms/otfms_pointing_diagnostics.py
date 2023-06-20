@@ -227,7 +227,9 @@ def main():
                 comments='#',
                 usecols=1).flatten())
 
-       #logger.info(list_of_target_fields, np.shape(list_of_target_fields))
+        #logger.info(list_of_target_fields, np.shape(list_of_target_fields))
+
+        logger.debug(field_name_and_ID_dict.keys())
 
         #list_of_target_fields = []
 

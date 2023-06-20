@@ -407,6 +407,16 @@ def get_otfms_output_variables(config_path: str):
     OTF_acronym: str
         The acronym used to name the OTF pointings
 
+    MS_outname: str
+        The outpout MS name (without the .ms extension)
+
+    skip_merge: bool
+        If True, the individual MS' directory will be kept, and the merged MS
+        will not be created
+
+    deep_clean: bool
+        If true, the individual MS' directoiry (bolob/) will be deleted
+
     """
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(config_path)
@@ -441,23 +451,42 @@ def get_otfms_output_variables(config_path: str):
 
     logger.info("Set 'MS_outname' to {0:s} ...".format(MS_outname))
 
-    # === deep_clean
+    # === skip merge
     try:
-        deep_clean = config['OUTPUT'].getboolean('deep_clean')
+        skip_merge = config['OUTPUT'].getboolean('skip_merge')
     # If there are comments in the line
     except BaseException:
-        deep_clean_string = config.get('OUTPUT', 'deep_clean')
-        deep_clean_string = pipeline.remove_comment(
-            deep_clean_string).strip()
+        skip_merge_string = config.get('OUTPUT', 'skip_merge')
+        skip_merge_string = pipeline.remove_comment(
+            skip_merge_string).strip()
 
         try:
-            deep_clean = misc.str_to_bool(deep_clean_string)
+            skip_merge = misc.str_to_bool(skip_merge_string)
         except BaseException:
             logger.warning(
-                "Invalid argument given to 'deep_clean', set it to False...")
-            deep_clean = False
+                "Invalid argument given to 'skip_merge', set it to False...")
+            skip_merge = False    
 
-    return OTF_acronym, MS_outname, deep_clean
+    # === deep_clean
+    if skip_merge == True:
+        deep_clean = False
+    else:
+        try:
+            deep_clean = config['OUTPUT'].getboolean('deep_clean')
+        # If there are comments in the line
+        except BaseException:
+            deep_clean_string = config.get('OUTPUT', 'deep_clean')
+            deep_clean_string = pipeline.remove_comment(
+                deep_clean_string).strip()
+
+            try:
+                deep_clean = misc.str_to_bool(deep_clean_string)
+            except BaseException:
+                logger.warning(
+                    "Invalid argument given to 'deep_clean', set it to False...")
+                deep_clean = False
+
+    return OTF_acronym, MS_outname, skip_merge, deep_clean
 
 
 def get_times_from_reference_pointing_file(refrence_pointing_npz: str):

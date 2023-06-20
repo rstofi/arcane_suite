@@ -419,7 +419,7 @@ def main():
     # === Configure output and garbage collection
     logger.debug('Configuring output and garbage collection...')
 
-    OTF_acronym, MS_outname, deep_clean = putil.get_otfms_output_variables(
+    OTF_acronym, MS_outname, skip_merge, deep_clean = putil.get_otfms_output_variables(
         args.config_file)
 
     # === Create pipeline
@@ -472,6 +472,9 @@ def main():
             command_line_tool_alias_dict['casa_alias']))
         sconfig.write("chgcentre_alias:  '{0:s}'\n".format(
             command_line_tool_alias_dict['chgcentre_alias']))
+        sconfig.write(
+            'skip_merge: {0:s}\n'.format(
+                str(skip_merge)))
         sconfig.write(
             'deep_clean: {0:s}\n'.format(
                 str(deep_clean)))
