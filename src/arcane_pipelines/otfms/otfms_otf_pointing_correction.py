@@ -48,8 +48,8 @@ def save_names_only(yaml_path, output_fname):
     otf_field_ID_mapping = pipeline.get_var_from_yaml(
         yaml_path=yaml_path, var_name='otf_field_ID_mapping')
 
-    acronym = otf_acronym = str(pipeline.get_var_from_yaml(yaml_path=yaml_path,
-                                                     var_name='OTF_acronym'))
+    otf_acronym = str(pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                                 var_name='OTF_acronym'))
 
     with open(output_fname, 'w') as namelistf:
 
@@ -62,7 +62,7 @@ def save_names_only(yaml_path, output_fname):
                 yaml_path, ID)
 
             otf_field_name = putil.generate_OTF_names_from_ra_dec(
-                ra=ra_centre, dec=dec_centre, acronym=acronym)
+                ra=ra_centre, dec=dec_centre, acronym=otf_acronym)
 
             namelistf.write('{0:s} {1:s} {2:.8f} {3:.8f}\n'.format(
                             ID, otf_field_name, ra_centre, dec_centre))

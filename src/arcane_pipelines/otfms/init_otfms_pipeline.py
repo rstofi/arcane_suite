@@ -277,6 +277,18 @@ def main():
 
     output_snakefile_path = os.path.join(working_dir, 'Snakefile')
 
+    # === Configure output and garbage collection
+    logger.debug('Configuring output and garbage collection...')
+
+    OTF_acronym, MS_outname, skip_merge, deep_clean = putil.get_otfms_output_variables(
+        args.config_file)
+
+    # Disable calibrators split when skip_merge is enabled
+    if skip_merge and split_calibrators:
+        logger.warning(
+            'Disabling `split_MS`, since `skip_calibrators` is set to True...')
+        split_calibrators = False
+
     # === Read the data sub selection from the config file
     logger.info('Solving for OTF field initialization...')
 
@@ -416,12 +428,6 @@ def main():
     logger.info('{0:d} OTF pointings are selected...'.format(
         np.size(cross_matched_reference_times)))
 
-    # === Configure output and garbage collection
-    logger.debug('Configuring output and garbage collection...')
-
-    OTF_acronym, MS_outname, skip_merge, deep_clean = putil.get_otfms_output_variables(
-        args.config_file)
-
     # === Create pipeline
     logger.info('Building Snakemake pipeline...')
 
@@ -453,15 +459,19 @@ def main():
             os.path.join(working_dir, 'logs')))
         sconfig.write('reports_dir:\n  {0:s}\n'.format(
             os.path.join(working_dir, 'reports')))
-        sconfig.write('log_level:\n  {0:s}\n'.format(log_level))
         sconfig.write('MS:\n  {0:s}\n'.format(
             MS_path))
         sconfig.write('pointing_ref:\n  {0:s}\n'.format(
             pointing_ref_path))
+        sconfig.write('log_level:  {0:s}\n'.format(log_level))
         sconfig.write("OTF_acronym:  '{0:s}'\n".format(
             OTF_acronym))
-        sconfig.write("MS_outname:  '{0:s}'\n".format(
-            MS_outname))
+        if MS_outname is not None:
+            sconfig.write("MS_outname:  '{0:s}'\n".format(
+                MS_outname))
+        else:
+            sconfig.write("MS_outname:  '{0:s}'\n".format(
+                'test'))
         sconfig.write('time_crossmatch_threshold:  {0:.8f}\n'.format(
             time_crossmatch_threshold))
         sconfig.write('split_timedelta:  {0:.8f}\n'.format(

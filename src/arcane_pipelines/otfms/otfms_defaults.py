@@ -35,7 +35,7 @@ _otfms_default_config_dict = {'ENV': {
     'OUTPUT': {
     'OTF_acronym': ['otfms', True, 'string'],
     'skip_merge': ['False', True, 'boolean'],
-    'MS_outname': ['final', True, 'string (without the .ms extension)'],
+    'MS_outname': ['final', True, 'string (without the .ms extension, not needed if `skip_merge` is True)'],
     'deep_clean': ['False', False, 'boolean']
 }}
 

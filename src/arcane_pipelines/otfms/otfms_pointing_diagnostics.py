@@ -18,7 +18,10 @@ from arcane_utils import misc as pmisc
 # === Set logging
 logger = pipeline.init_logger()
 
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
+
+# Disable the findfont warning...
+logging.getLogger('matplotlib.font_manager').disabled = True
 
 # === Functions ===
 
@@ -113,6 +116,9 @@ def main():
         logger.warn("The /reports dir is missing, creating it now!")
         os.mkdir(reports_dir_path)
 
+    skip_merge = bool(pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                                 var_name='skip_merge'))
+
     if not args.output_mode:
         logger.info("Running *otfms_position_diagnostic* in 'input' mode")
 
@@ -120,7 +126,7 @@ def main():
         input_ms_path = pipeline.get_var_from_yaml(yaml_path=yaml_path,
                                                    var_name='MS')
 
-        ptitle = "Phase centres (with field ID's) before OTF correction"
+        ptitle = "Phase centres before OTF correction"
 
     else:
         logger.info("Running *otfms_position_diagnostic* in 'output' mode")
@@ -132,19 +138,25 @@ def main():
                                                     var_name='MS_outname') +\
             '.ms'
 
-        input_ms_path = os.path.join(
-            output_dir, output_ms_name)  # Genarte from input .yaml
+        if not skip_merge:
+            input_ms_path = os.path.join(
+                output_dir, output_ms_name)  # Genarte from input .yaml
+        else:
+            input_ms_path = None
+            blob_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
+                                                  var_name='blob_dir')
 
-        ptitle = "Phase centres (with field ID's) after OTF correction"
+        ptitle = "Phase centres after OTF correction"
 
     # The MS used for the diagnostics plots
-    logger.debug(
-        "The MS used for the diagnostics plots: {0:s} ...".format(input_ms_path))
+    if not skip_merge:
+        logger.debug(
+            "The MS used for the diagnostics plots: {0:s} ...".format(input_ms_path))
 
-    # Get the field ID and field name diect
+        # Get the field ID and field name diect
 
-    field_name_and_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(
-        mspath=input_ms_path, scan_ID=False, close=True)
+        field_name_and_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(
+            mspath=input_ms_path, scan_ID=False, close=True)
 
     # === Generate diagnostics plots for the calibrator fields:
     # Should be the same routine for both the 'input' and 'output' mode
@@ -207,57 +219,74 @@ def main():
 
     # === Select field ID's to plot based on the MS:
     # The field names should be different for the 'input' and 'output' mode
-    if not args.output_mode:
-        list_of_target_fields = pipeline.get_var_from_yaml(
-            yaml_path=yaml_path, var_name='target_fields')
+    if not skip_merge:
+        if not args.output_mode:
+            list_of_target_fields = pipeline.get_var_from_yaml(
+                yaml_path=yaml_path, var_name='target_fields')
+
+        else:
+            # Get the list of traget fields from the ``otf_field_names.dat``
+            # file
+
+            output_dir = pipeline.get_var_from_yaml(
+                yaml_path=yaml_path, var_name='output_dir')
+
+            list_of_target_fields = list(
+                np.loadtxt(
+                    os.path.join(
+                        output_dir,
+                        'otf_field_names.dat'),
+                    dtype=str,
+                    skiprows=1,
+                    comments='#',
+                    usecols=1).flatten())
+
+            #logger.info(list_of_target_fields, np.shape(list_of_target_fields))
+
+            logger.debug(field_name_and_ID_dict.keys())
+
+            #list_of_target_fields = []
+
+        # Now check if the calibrator fields are ALL in the MS!
+        target_field_ID_list = []
+
+        for field_Name in list_of_target_fields:
+            if field_Name not in field_name_and_ID_dict.keys():
+                raise ValueError(
+                    "The target field {0:s} is not in the input MS!".format(field_Name))
+
+            else:
+                if np.size(field_name_and_ID_dict[field_Name]) > 1:
+                    logger.debug(
+                        "Target field {0:s} has more than 1 associated field ID's!".format(field_Name))
+
+                    for field_ID in field_name_and_ID_dict[field_Name]:
+                        target_field_ID_list.append(field_ID)
+
+                else:
+                    target_field_ID_list.append(
+                        field_name_and_ID_dict[field_Name][0])
+
+        # logger.info("Target field(s) selected: {0:s}".format(
+        #    pmisc.convert_list_to_string(list_of_target_fields)))
+
+        logger.debug("Target field(s) selected: {0:s}".format(
+            pmisc.convert_list_to_string(target_field_ID_list)))
 
     else:
-        # Get the list of traget fields from the ``otf_field_names.dat`` file
-
         output_dir = pipeline.get_var_from_yaml(
             yaml_path=yaml_path, var_name='output_dir')
 
-        list_of_target_fields = list(
+        list_of_target_ms_IDs = list(
             np.loadtxt(
                 os.path.join(
                     output_dir,
                     'otf_field_names.dat'),
                 dtype=str,
-                skiprows=1,
                 comments='#',
-                usecols=1).flatten())
+                usecols=0))
 
-        #logger.info(list_of_target_fields, np.shape(list_of_target_fields))
-
-        logger.debug(field_name_and_ID_dict.keys())
-
-        #list_of_target_fields = []
-
-    # Now check if the calibrator fields are ALL in the MS!
-    target_field_ID_list = []
-
-    for field_Name in list_of_target_fields:
-        if field_Name not in field_name_and_ID_dict.keys():
-            raise ValueError(
-                "The target field {0:s} is not in the input MS!".format(field_Name))
-
-        else:
-            if np.size(field_name_and_ID_dict[field_Name]) > 1:
-                logger.debug(
-                    "Target field {0:s} has more than 1 associated field ID's!".format(field_Name))
-
-                for field_ID in field_name_and_ID_dict[field_Name]:
-                    target_field_ID_list.append(field_ID)
-
-            else:
-                target_field_ID_list.append(
-                    field_name_and_ID_dict[field_Name][0])
-
-    logger.info("Target field(s) selected: {0:s}".format(
-        pmisc.convert_list_to_string(list_of_target_fields)))
-
-    logger.debug("Target field(s) selected: {0:s}".format(
-        pmisc.convert_list_to_string(target_field_ID_list)))
+        print(list_of_target_ms_IDs)
 
     # === Generate the plot from the input MS
 
@@ -275,11 +304,18 @@ def main():
     logger.info(
         "Generating diagnostics plot for target fields under: {0:s} ".format(outname_path))
 
-    visual_diagnostics.create_field_ID_RA_Dec_plot(
-        mspath=input_ms_path,
-        otf_fig_path=outname_path,
-        field_ID_list=target_field_ID_list,
-        ptitle=ptitle)
+    if not skip_merge:
+        visual_diagnostics.create_field_ID_RA_Dec_plot_from_single_MS(
+            mspath=input_ms_path,
+            otf_fig_path=outname_path,
+            field_ID_list=target_field_ID_list,
+            ptitle=ptitle)
+    else:
+        visual_diagnostics.create_field_ID_RA_Dec_plot_from_MS_list(
+            ms_IDs_list=list_of_target_ms_IDs,
+            blob_path=blob_dir,
+            otf_fig_path=outname_path,
+            ptitle=ptitle)
 
     logger.info("Exit 0")
 

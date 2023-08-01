@@ -436,21 +436,6 @@ def get_otfms_output_variables(config_path: str):
 
     logger.info("Set 'OTF_acronym' to {0:s} ...".format(OTF_acronym))
 
-    # === MS_outname
-
-    MS_outname = config.get('OUTPUT', 'MS_outname')
-    MS_outname = pipeline.remove_comment(MS_outname).strip()
-
-    if MS_outname == '':
-        raise ValueError("Missing mandatory parameter: 'MS_outname'")
-
-        # logger.warning(
-        #    "Missing mandatory parameter: 'MS_outname' fallback to default: {0:s}".format(
-        #        otfms_defaults._otfms_default_config_dict['OUTPUT']['MS_outname'][0]))
-        #MS_outname = otfms_defaults._otfms_default_config_dict['OUTPUT']['MS_outname'][0]
-
-    logger.info("Set 'MS_outname' to {0:s} ...".format(MS_outname))
-
     # === skip merge
     try:
         skip_merge = config['OUTPUT'].getboolean('skip_merge')
@@ -465,10 +450,29 @@ def get_otfms_output_variables(config_path: str):
         except BaseException:
             logger.warning(
                 "Invalid argument given to 'skip_merge', set it to False...")
-            skip_merge = False    
+            skip_merge = False
+
+    # === MS_outname
+
+    if skip_merge:
+        logger.info("No merged MS will be created (skip `merge_*` rule)...")
+        MS_outname = None
+    else:
+        MS_outname = config.get('OUTPUT', 'MS_outname')
+        MS_outname = pipeline.remove_comment(MS_outname).strip()
+
+        if MS_outname == '':
+            raise ValueError("Missing mandatory parameter: 'MS_outname'")
+
+            # logger.warning(
+            #    "Missing mandatory parameter: 'MS_outname' fallback to default: {0:s}".format(
+            #        otfms_defaults._otfms_default_config_dict['OUTPUT']['MS_outname'][0]))
+            #MS_outname = otfms_defaults._otfms_default_config_dict['OUTPUT']['MS_outname'][0]
+
+        logger.info("Set 'MS_outname' to {0:s} ...".format(MS_outname))
 
     # === deep_clean
-    if skip_merge == True:
+    if skip_merge:
         deep_clean = False
     else:
         try:

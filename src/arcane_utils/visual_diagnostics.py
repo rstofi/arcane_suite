@@ -4,9 +4,11 @@ be general routines.
 NOTE: I mightmove some functions from here to tools
 """
 
-__all__ = []
+__all__ = ['create_field_ID_RA_Dec_plot_from_single_MS',
+           'create_field_ID_RA_Dec_plot_from_MS_list']
 
 import sys
+import os
 import logging
 import warnings
 
@@ -49,20 +51,19 @@ logger = logging.getLogger(__name__)
 
 
 # === Functions ===
-
-def create_field_ID_RA_Dec_plot(
+def create_field_ID_RA_Dec_plot_from_single_MS(
         mspath: str,
         otf_fig_path: str,
-        ptitle: str = "Phase centres (with field ID's)",
+        ptitle: str = "Phase centres",
         field_ID_list: list = None,
-        display_new_IDs_treshold: int = 100,
+        display_IDs: int = False,
         ant1_ID: int = 0,
         ant2_ID: int = 1,
         close: bool = False):
     """
     NOTE: This docstring was created by ChatGPT3.
 
-    Creates a scatter plot of the phase centres of the fields in an MS file.
+    Creates a scatter plot of the phase centres of the fields in a SINGLE MS file.
     Each point on the plot is labeled with the field ID.
 
     Parameters:
@@ -79,6 +80,10 @@ def create_field_ID_RA_Dec_plot(
     field_ID_list: Optional[List[int]], default None
         A list of field ID's to include in the plot.
 
+    display_IDs: bool
+        If set to True the field ID's are written on tiop of the points
+        (not recommended for scanning observations as the text can be too crowded)
+
     ant1_ID: int, default 0
         The ID of the first antenna.
 
@@ -93,8 +98,10 @@ def create_field_ID_RA_Dec_plot(
     Creates a plot
     """
 
-    logger.info("Creating field IDs Ra--Dec plot with ID displyay threshold {0:d}".format(
-        display_new_IDs_treshold))
+    if not display_IDs:
+        logger.info("Creating field IDs Ra--Dec plot")
+    else:
+        logger.info("Creating field IDs Ra--Dec plot with field IDs")
 
     # Get the phase centres and ID's from the MS
     phase_centre_ID_dict = ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(
@@ -118,10 +125,59 @@ def create_field_ID_RA_Dec_plot(
                    phase_centre_ID_dict[field_id][1],
                    color=c1, marker='o', s=50)
 
-        if len(phase_centre_ID_dict) < display_new_IDs_treshold:
+        if display_IDs:
             ax.text(phase_centre_ID_dict[field_id][0] + text_offset,
                     phase_centre_ID_dict[field_id][1] + text_offset,
                     field_id, fontsize=14)
+
+    ax.set_xlabel(r'RA -- SIN [deg]', fontsize=18)
+    ax.set_ylabel('Dec -- SIN [deg]', fontsize=18)
+
+    plt.suptitle(ptitle, fontsize=18)
+
+    # Set figsize
+    plt.gcf().set_size_inches(8, 5)  # NOT that the size is defined in inches!
+
+    plt.savefig(otf_fig_path, bbox_inches='tight')
+    plt.close()
+
+
+def create_field_ID_RA_Dec_plot_from_MS_list(
+        ms_IDs_list: list,
+        blob_path: str,
+        otf_fig_path: str,
+        ptitle: str = "Phase centres",
+        ant1_ID: int = 0,
+        ant2_ID: int = 1,
+        close: bool = False):
+    """
+    NOTE: cannot display IDs by default
+    """
+    logger.info("Creating field IDs Ra--Dec plot")
+
+    phase_centre_list_from_blob = []
+
+    for ms_ID in ms_IDs_list:
+        mspath = os.path.join(
+            blob_path,
+            'otf_pointing_no_{0:s}.ms'.format(
+                str(ms_ID)))
+
+        # All MS should have only one field with ID = 0. We create a dict and
+        # get the corrsponding element
+        phase_centre = ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(
+            mspath=mspath, field_ID_list=[0], ant1_ID=ant1_ID, ant2_ID=ant2_ID, close=close)[0]
+
+        phase_centre_list_from_blob.append(phase_centre)
+
+    # Create the plot
+    fig = plt.figure(1)
+    ax = fig.add_subplot(111)
+
+    for i in range(0, len(phase_centre_list_from_blob)):
+        ax.scatter(phase_centre_list_from_blob[i][0],
+                   phase_centre_list_from_blob[i][1],
+                   color=c1, marker='o', s=50)
 
     ax.set_xlabel(r'RA -- SIN [deg]', fontsize=18)
     ax.set_ylabel('Dec -- SIN [deg]', fontsize=18)
