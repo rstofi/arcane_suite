@@ -83,12 +83,12 @@ OTF_FIELD_ID_MAPPING = config['otf_field_ID_mapping']
 #To avoid ambiguity in wildcards, use the keys only
 OTF_FIELD_IDs = list(OTF_FIELD_ID_MAPPING.keys())
 
+#=============
 #=== Rules ===
+#=============
 rule all:
     input:
         '{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
-        '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME),
-        '{0:s}'.format(LOG_dir) + '/plot_output_fields.log',
         '{0:s}'.format(LOG_dir) + '/clean_up.log'
 
 #=== First and last rule: analytics
@@ -109,24 +109,6 @@ rule plot_input_fields:
         "arcane_otfms_pointing_diagnostics -c {params.yaml_path} " +\
         "-o {params.output_fname_base} " +\
         ">> {params.log_dir}/plot_input_fields.log"
-
-#Plot the fields after the OTF correction
-rule plot_output_fields:
-    input:
-        '{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
-        '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME)
-    output:
-    log:
-        '{0:s}'.format(LOG_dir) +\
-        '/plot_output_fields.log'  
-    params:
-        log_dir = LOG_dir,
-        yaml_path = YAML_path,
-        output_fname_base = 'output_fields.png'
-    shell:
-        "arcane_otfms_pointing_diagnostics -c {params.yaml_path} " +\
-        "-o {params.output_fname_base} -om " +\
-        ">> {params.log_dir}/plot_output_fields.log "
 
 #=== Calibrator fields are split from the MS
 #Split the calibrator field(s) from input MS
@@ -162,6 +144,9 @@ if bool(config['split_calibrators']):
 
     #TO DO: maybe define a template rule for merging ?
 
+    #NOTE: we cannot have `skip_merge` and `split calibrators` simultaneously!
+    # This is taken care of in the `init_otfms` script
+
     rule merge_otf_pointings_and_calibrators:
         input:
             expand('{0:s}'.format(LOG_dir) +\
@@ -189,33 +174,108 @@ if bool(config['split_calibrators']):
             '>> {params.log_dir}/merge_scans.log '
 
 #=== NO calibrator fields are split from the input MS
+
+# === Take care of the two cases of enabling/disabling the merge step
+
+# This is a tricky situation as NO IF/ELSE statement is allowed in the input: part
+# of rules. See: https://stackoverflow.com/questions/72686943/snakemake-if-else-statement-within-rule-input
+
+# TO DO: implement rule templates to avoid rule duplication...
+
+# My current solution: Alter the pipeline for the two cases, including having
+# different all rules. A simpler solution would have been is to simply create a
+# a dummy (i.e. embpty) MS, when merging is disabled. However, I feel the resulting
+# DAG would be confusing, and also for the user seeing an MS created in the results/
+# directory would have been confusing. And so, I decided to hide this from the end-
+# user. Nonetheless, this Snakefile should be cleaned for code-clarity...
+
 else:
-    #Merge phase-rotated OTF pointings and the calibrator(s) 
-    rule merge_otf_pointings:
+    # === If we ENABLE the merge step
+
+    if not bool(config['skip_merge']):
+        #Merge phase-rotated OTF pointings and the calibrator(s) 
+        rule merge_otf_pointings:
+            input:
+                expand('{0:s}'.format(LOG_dir) +\
+                '/otf_pointing_no_{field_ID}_renaming.log', field_ID=OTF_FIELD_IDs),
+                expand('{0:s}'.format(BLOB_dir) +\
+                '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs)
+            output:
+                directory('{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME))
+            log:
+                '{0:s}/merge_scans.log'.format(LOG_dir)
+            params:
+                yaml_path = YAML_path,
+                log_dir = LOG_dir,
+                #working_dir = WORKING_dir,
+                #output_dir = OUTPUT_dir,
+                casa_executable = os.path.join(BLOB_dir, 'merge_otf_pointings.py'),
+                casa_alias = CASA_alias
+            shell:
+                'arcane_otfms_merge -c {params.yaml_path} ' +\
+                '> {params.log_dir}/merge_scans.log ; ' +\
+                '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
+                '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
+                'arcane_otfms_merge -p -c {params.yaml_path} ' +\
+                '>> {params.log_dir}/merge_scans.log '
+
+# === Take care of the SKIP and ENABLE merging cases
+if bool(config['skip_merge']):
+    #Plot the fields after the OTF correction
+    rule plot_output_fields:
         input:
+            '{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
             expand('{0:s}'.format(LOG_dir) +\
             '/otf_pointing_no_{field_ID}_renaming.log', field_ID=OTF_FIELD_IDs),
             expand('{0:s}'.format(BLOB_dir) +\
             '/otf_pointing_no_{field_ID}.ms', field_ID=OTF_FIELD_IDs)
         output:
-            directory('{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME))
         log:
-            '{0:s}/merge_scans.log'.format(LOG_dir)
+            '{0:s}'.format(LOG_dir) +\
+            '/plot_output_fields.log'
         params:
-            yaml_path = YAML_path,
             log_dir = LOG_dir,
-            #working_dir = WORKING_dir,
-            #output_dir = OUTPUT_dir,
-            casa_executable = os.path.join(BLOB_dir, 'merge_otf_pointings.py'),
-            casa_alias = CASA_alias
+            yaml_path = YAML_path,
+            output_fname_base = 'output_fields.png'
         shell:
-            'arcane_otfms_merge -c {params.yaml_path} ' +\
-            '> {params.log_dir}/merge_scans.log ; ' +\
-            '{params.casa_alias} --log2term --nogui --nologfile --nocrashreport -c {params.casa_executable} ' +\
-            '>> {params.log_dir}/merge_scans.log 2>&1 ; ' +\
-            'arcane_otfms_merge -p -c {params.yaml_path} ' +\
-            '>> {params.log_dir}/merge_scans.log '
+            "arcane_otfms_pointing_diagnostics -c {params.yaml_path} " +\
+            "-o {params.output_fname_base} -om " +\
+            ">> {params.log_dir}/plot_output_fields.log "
 
+
+else:
+    #Plot the fields after the OTF correction
+    rule plot_output_fields:
+        input:
+            '{0:s}/otf_field_names.dat'.format(OUTPUT_dir),
+            '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME)
+        output:
+        log:
+            '{0:s}'.format(LOG_dir) +\
+            '/plot_output_fields.log'  
+        params:
+            log_dir = LOG_dir,
+            yaml_path = YAML_path,
+            output_fname_base = 'output_fields.png'
+        shell:
+            "arcane_otfms_pointing_diagnostics -c {params.yaml_path} " +\
+            "-o {params.output_fname_base} -om " +\
+            ">> {params.log_dir}/plot_output_fields.log "
+
+#Clean up CASA garbage files
+rule clean_up:
+    input:
+        '{0:s}'.format(LOG_dir) +\
+        '/plot_output_fields.log',
+        '{0:s}'.format(YAML_path)
+    output:
+    params:
+        log_dir = LOG_dir,
+        yaml_path = YAML_path
+    log:
+        '{0:s}/clean_up.log'.format(LOG_dir)
+    shell:
+        'arcane_otfms_clean_up -c {params.yaml_path} > {params.log_dir}/clean_up.log'
 
 #List the new OTF pointing names
 rule list_new_otf_field_names:
@@ -302,17 +362,4 @@ rule rename_otf_pointings:
     shell:
         'arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_renaming.log'
-
-rule clean_up:
-    input:
-        '{0:s}/{1:s}'.format(OUTPUT_dir, MS_OUTPUT_NAME),
-        '{0:s}'.format(YAML_path)
-    output:
-    params:
-        log_dir = LOG_dir,
-        yaml_path = YAML_path
-    log:
-        '{0:s}/clean_up.log'.format(LOG_dir)
-    shell:
-        'arcane_otfms_clean_up -c {params.yaml_path} > {params.log_dir}/clean_up.log'
 

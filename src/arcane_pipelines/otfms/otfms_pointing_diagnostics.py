@@ -149,7 +149,7 @@ def main():
         ptitle = "Phase centres after OTF correction"
 
     # The MS used for the diagnostics plots
-    if not skip_merge:
+    if not skip_merge or not args.output_mode:
         logger.debug(
             "The MS used for the diagnostics plots: {0:s} ...".format(input_ms_path))
 
@@ -211,7 +211,7 @@ def main():
             logger.info(
                 "Generating diagnostics plot for calibrator fields under: {0:s} ".format(outname_path))
 
-            visual_diagnostics.create_field_ID_RA_Dec_plot(
+            visual_diagnostics.create_field_ID_RA_Dec_plot_from_single_MS(
                 mspath=input_ms_path,
                 otf_fig_path=outname_path,
                 field_ID_list=calibrator_field_ID_list,
@@ -219,15 +219,15 @@ def main():
 
     # === Select field ID's to plot based on the MS:
     # The field names should be different for the 'input' and 'output' mode
-    if not skip_merge:
-        if not args.output_mode:
-            list_of_target_fields = pipeline.get_var_from_yaml(
-                yaml_path=yaml_path, var_name='target_fields')
+    if not args.output_mode:
+        list_of_target_fields = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='target_fields')
 
-        else:
-            # Get the list of traget fields from the ``otf_field_names.dat``
-            # file
+    else:
+        # Get the list of traget fields from the ``otf_field_names.dat``
+        # file
 
+        if not skip_merge:
             output_dir = pipeline.get_var_from_yaml(
                 yaml_path=yaml_path, var_name='output_dir')
 
@@ -247,6 +247,22 @@ def main():
 
             #list_of_target_fields = []
 
+        else:
+            output_dir = pipeline.get_var_from_yaml(
+                yaml_path=yaml_path, var_name='output_dir')
+
+            list_of_target_ms_IDs = list(
+                np.loadtxt(
+                    os.path.join(
+                        output_dir,
+                        'otf_field_names.dat'),
+                    dtype=str,
+                    comments='#',
+                    usecols=0))
+
+    # Generate target field ID list
+
+    if not skip_merge or not args.output_mode:
         # Now check if the calibrator fields are ALL in the MS!
         target_field_ID_list = []
 
@@ -273,21 +289,6 @@ def main():
         logger.debug("Target field(s) selected: {0:s}".format(
             pmisc.convert_list_to_string(target_field_ID_list)))
 
-    else:
-        output_dir = pipeline.get_var_from_yaml(
-            yaml_path=yaml_path, var_name='output_dir')
-
-        list_of_target_ms_IDs = list(
-            np.loadtxt(
-                os.path.join(
-                    output_dir,
-                    'otf_field_names.dat'),
-                dtype=str,
-                comments='#',
-                usecols=0))
-
-        print(list_of_target_ms_IDs)
-
     # === Generate the plot from the input MS
 
     # Define the output full path based on the reports_dir path
@@ -304,6 +305,19 @@ def main():
     logger.info(
         "Generating diagnostics plot for target fields under: {0:s} ".format(outname_path))
 
+    # Input mode
+    if not args.output_mode:
+        visual_diagnostics.create_field_ID_RA_Dec_plot_from_single_MS(
+            mspath=input_ms_path,
+            otf_fig_path=outname_path,
+            field_ID_list=target_field_ID_list,
+            ptitle=ptitle)
+
+        logger.info("Exit 0")
+
+        sys.exit(0)
+
+    # Output mode
     if not skip_merge:
         visual_diagnostics.create_field_ID_RA_Dec_plot_from_single_MS(
             mspath=input_ms_path,

@@ -149,9 +149,45 @@ def create_field_ID_RA_Dec_plot_from_MS_list(
         ptitle: str = "Phase centres",
         ant1_ID: int = 0,
         ant2_ID: int = 1,
-        close: bool = False):
+        close: bool = True):
     """
-    NOTE: cannot display IDs by default
+    Creates a scatter plot of the phase centres of the fields from multiple OTF
+    format MS files, from which ONLY the first field ID is considered.
+
+    NOTE: this function cannot display IDs by default, as from each MS the field
+    with 0 ID is used.
+
+    Parameters:
+    -----------
+    ms_IDs_list: list of int
+        A list of the IDs used to get the OTF format MS files from unde /blob
+
+    otf_fig_path: str
+        The path to the output figure file.
+
+    ptitle: Optional[str], default "Phase centres (with field ID's)"
+        The title of the plot.
+
+    field_ID_list: Optional[List[int]], default None
+        A list of field ID's to include in the plot.
+
+    display_IDs: bool
+        If set to True the field ID's are written on tiop of the points
+        (not recommended for scanning observations as the text can be too crowded)
+
+    ant1_ID: int, default 0
+        The ID of the first antenna.
+
+    ant2_ID: int, default 1
+        The ID of the second antenna.
+
+    close: bool, default False
+        Whether to close the MS file after reading.
+
+    Returns:
+    -------
+    Creates a plot
+
     """
     logger.info("Creating field IDs Ra--Dec plot")
 
