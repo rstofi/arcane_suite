@@ -255,7 +255,7 @@ def main():
             # Because the files under `working_dir` will be overwritten
 
     # Get the input data
-    MS_path, pointing_ref_path, split_calibrators = putil.get_otfms_data_variables(
+    MS_path, pointing_ref_path, split_calibrators, flag_noise_diode = putil.get_otfms_data_variables(
         args.config_file)
 
     if not os.path.exists(MS_path):
@@ -296,8 +296,7 @@ def main():
 
     calibrator_list, target_field_list, timerange, scans, ant1_ID, ant2_ID, \
         time_crossmatch_threshold, split_timedelta, position_crossmatch_threshold = \
-        putil.get_otfms_data_selection_from_config(args.config_file,
-                                                   split_calibrators=split_calibrators)
+        putil.get_otfms_data_selection_from_config(args.config_file)
 
     # Check if calibrator and target fields are in the MS
     field_Name_ID_dict = ms_wrapper.get_fieldname_and_ID_list_dict_from_MS(

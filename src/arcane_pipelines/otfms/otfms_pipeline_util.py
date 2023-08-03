@@ -1,4 +1,7 @@
 """Collection of utility functions unique to the `otfms` pipeline
+
+TO DO: refactor the code by using a separate readin function for the variables...
+    now I have waaay to much code duplication going on
 """
 
 __all__ = [
@@ -88,22 +91,31 @@ def get_otfms_data_variables(config_path: str):
         Path to the single-dish reference antenna pointing file. Should be an
         .npz file with [ra, dec, time] arrays
 
+    split_calibrators: bool
+        If True, the calibrators are split and then merged into the OTF format MS
+
+    flag_noise_diode: bool
+        If True, the noise diode affected MS' will be flagged
+
     """
     config = configparser.ConfigParser()
     config.read(config_path)
 
+    # === MS_dir
     MS_dir = config.get('DATA', 'MS')
     MS_dir = pipeline.remove_comment(MS_dir).strip()
 
     if MS_dir == '':
         raise ValueError("Missing mandatory parameter: 'MS'")
 
+    # === pointing_ref
     pointing_ref = config.get('DATA', 'pointing_ref')
     pointing_ref = pipeline.remove_comment(pointing_ref).strip()
 
     if pointing_ref == '':
         raise ValueError("Missing mandatory parameter: 'pointing_ref'")
 
+    # === split_calibrators
     try:
         split_calibrators = config['DATA'].getboolean('split_calibrators')
     # If there are comments in the line
@@ -119,12 +131,27 @@ def get_otfms_data_variables(config_path: str):
                 "Invalid argument given to 'split_calibrators', set it to False...")
             split_calibrators = False
 
-    return MS_dir, pointing_ref, split_calibrators
+    # === flag_noise_diode
+    try:
+        flag_noise_diode = config['DATA'].getboolean('flag_noise_diode')
+    # If there are comments in the line
+    except BaseException:
+        split_calibrators_string = config.get('DATA', 'flag_noise_diode')
+        split_calibrators_string = pipeline.remove_comment(
+            split_calibrators_string).strip()
+
+        try:
+            flag_noise_diode = misc.str_to_bool(split_calibrators_string)
+        except BaseException:
+            logger.warning(
+                "Invalid argument given to 'flag_noise_diode', set it to False...")
+            flag_noise_diode = False
+
+    return MS_dir, pointing_ref, split_calibrators, flag_noise_diode
 
 
 def get_otfms_data_selection_from_config(
-        config_path: str,
-        split_calibrators: bool = False):
+        config_path: str):
     """Reads the data selection for the OTF to MS conversion from the config file:
 
     In the config file the targets MUST be specifyed, and if we awant to split the
@@ -178,6 +205,12 @@ def get_otfms_data_selection_from_config(
     config = configparser.ConfigParser(allow_no_value=True)
     config.read(config_path)
 
+    # Get the spolit calibrators variable
+    MS_dir, pointing_ref, split_calibrators, flag_noise_diode = get_otfms_data_variables(
+        config_path)
+
+    del MS_dir, pointing_ref
+
     # === Quick routine to get the argument values that are list of strings
     # ---------------------------------------------------------------------------
     """Get a a parameter from the argparse parset file as a list of strings. This
@@ -212,8 +245,11 @@ def get_otfms_data_selection_from_config(
         config.get(section, arg_var)).strip().split(',')
     # ---------------------------------------------------------------------------
 
-    # Mandatory
-    #calibrator_list = get_string_list('DATA', 'calibrator_list')
+    # ========================
+    # === Mandatory params ===
+    # ========================
+
+    # === Target fields
     target_field_list = get_string_list('DATA', 'target_field_list')
 
     # if len(calibrator_list) == 1 and calibrator_list[0] == '':
@@ -221,10 +257,12 @@ def get_otfms_data_selection_from_config(
     if len(target_field_list) == 1 and target_field_list[0] == '':
         raise ValueError('Missing mandatory parameter: target_field_list')
 
-    # Check if calibrator list is needed
-    calibrator_list = get_string_list('DATA', 'calibrator_list')
+    # === Calibrator fields
 
+    # Check if calibrator list is needed
     if split_calibrators:
+        calibrator_list = get_string_list('DATA', 'calibrator_list')
+
         # Check if calibrators are not defined
         if len(calibrator_list) == 1 and calibrator_list[0] == '':
             raise ValueError(
@@ -232,25 +270,13 @@ def get_otfms_data_selection_from_config(
     else:
         calibrator_list = []  # Return empty list
 
-    # Optional
-    try:
-        timerange = config.get('DATA', 'timerange', fallback=None)
-        timerange = pipeline.remove_comment(timerange)
+    # ===================
+    # === Optional params
+    # ===================
 
-        # If no value is provided
-        if timerange.strip() == '':
-            timerange = None
-        else:
-            # Check for format (check are inside the function)
-            _ = a_time.convert_casa_timerange_selection_to_unix_times(
-                timerange)
+    # === Noise diode flagging
 
-    except Exception as e:  # Catch the error message
-        logger.warning(
-            'An error occured while parsing timerange value:', exc_info=e)
-        logger.info('Set timerange to None')
-        timerange = None
-
+    # === Scans
     try:  # If a single scan ID is provided
         scans = list(config.getint('DATA', 'scans', fallback=None))
     except BaseException:
@@ -269,6 +295,25 @@ def get_otfms_data_selection_from_config(
                 logger.warning(
                     'Invalid scan ID(s): ignoring user input and use all scans...')
                 scans = None
+
+    # === timerange
+    try:
+        timerange = config.get('DATA', 'timerange', fallback=None)
+        timerange = pipeline.remove_comment(timerange)
+
+        # If no value is provided
+        if timerange.strip() == '':
+            timerange = None
+        else:
+            # Check for format (check are inside the function)
+            _ = a_time.convert_casa_timerange_selection_to_unix_times(
+                timerange)
+
+    except Exception as e:  # Catch the error message
+        logger.warning(
+            'An error occured while parsing timerange value:', exc_info=e)
+        logger.info('Set timerange to None')
+        timerange = None
 
     # === ant1_ID
     default_ant1_ID = int(

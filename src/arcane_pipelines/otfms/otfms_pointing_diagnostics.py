@@ -1,5 +1,6 @@
 """The command line tool used to generate the phase centre position plots before
 and after the phase rotation. Used in the following rules:
+`plot_input_fields` and `plot_output_fields`
 """
 
 import sys
