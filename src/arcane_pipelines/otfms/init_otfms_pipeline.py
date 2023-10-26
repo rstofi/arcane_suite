@@ -232,7 +232,7 @@ def main():
 
         # Check for casa installation
         casa_wrapper.check_casa_installation(
-            command_line_tool_alias_dict['casa_alias'])
+            command_line_tool_alias_dict['casa_alias'], pedantic=True)
 
     else:
         logger.warning('Skip checking for `chgcentre` installation')
