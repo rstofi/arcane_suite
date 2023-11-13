@@ -1,0 +1,122 @@
+schema_version: 1.1.0
+
+#=== General
+general:
+  title: 'Imaging and selfcal 1630519596'
+  msdir: ''
+  rawdatadir: ''
+  output: ''
+  prefix: 'imaging_and_selfcal'
+
+#=== Getdata
+getdata:
+  dataid: ['']
+  extension: ms
+
+#=== Obsconf
+obsconf:
+  obsinfo:
+    enable: true
+    listobs: true
+    plotelev:
+      enable: false
+      plotter: plotms
+  target: ['']
+  gcal: ['']
+  fcal: ['']
+  bpcal: ['']
+  xcal: ['']
+  refant: 'm008' #I shall select m008 as advised in some online config file
+
+#=== Transform
+transform:
+  enable: false
+  field: calibrators
+  label_out: cal
+  split_field:
+    enable: true
+    col: data
+
+#=== Prep
+prep:
+  enable: false
+  label_in: cal
+  field: calibrators
+  specweights:
+    enable: true
+    mode: uniform
+
+#=== Flag
+flag:
+  enable: false
+  field: calibrators
+  label_in: cal
+
+#=== Crosscal
+crosscal:
+  enable: false
+  label_in: 'cal'
+  label_cal: '1gc1'
+
+#=== Transform 2
+transform__2:
+  enable: true
+  field: target
+  label_out: corr
+  changecentre:
+    enable: false
+  split_field:
+    enable: true
+    #Below I apply the calibrations
+    otfcal:
+      enable: true
+      label_cal: '1gc1'
+
+#=== Prep 2
+prep__2:
+  enable: true
+  label_in: corr
+  field: target
+  fixuvw:
+    enable: false
+  specweights:
+    enable: true
+    mode: uniform
+
+#=== Flag 2
+flag__2:
+  enable: false
+
+#=== Mask
+mask:
+  enable: false
+
+#=== Selfcal
+selfcal:
+  enable: true
+  label_in: corr
+  minuvw_m: 50 #Exclude baselines below 50m this is ~>150lambda for the bottom of L-band
+  img_npix: 4096 #4096 originally
+  img_cell: 1.5 #1.3 originally
+  #img_npix: 2048  
+  #img_cell: 3.
+  cal_timeslots_chunk: 0 #Use full 2s timerange
+  img_nchans: 8 #Nuber of sub-bands to image
+  img_weight: briggs
+  img_robust: -0.5
+  img_mfs_weighting: true #Enable MFS weighting
+  img_specfit_nrcoeff: 2 #Fit a 3rd order (value + 1) spectral polynomila to sources
+  img_joinchans: true #Join all channels for MFS imaging
+  img_multiscale: true #Enable multi-scale imaging
+  img_multiscale_scales: '0,8,13,26,53' #Empty string uses automatic scales of 0, beam size and increasing by fctor of 2
+  img_nrdeconvsubimg: 0
+  image:
+    enable: true
+  calibrate_with: cubical
+  cal_niter: 1
+  calibrate:
+    enable: true
+    gain_matrix_type: ['GainDiagPhase']
+    gsols_timeslots: [2] #This is the time solutioin interval
+    gsols_chan: [16] #solve for 16 channels (?) for this observation should be 3.3 MHz
+ 
