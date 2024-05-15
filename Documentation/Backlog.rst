@@ -3,6 +3,8 @@ Backlog
 
 This page is a simple backlog, I try to keep up to date. I am not following any strict development plan, simply collect various tasks here.
 
+NOTE: Documentation, and golas need serious re-work to catch up with the current development and project status!
+
 Ongoing stories
 ---------------
 
@@ -24,8 +26,9 @@ Known bugs/issues
 
 Bugs and issues, I am aware and should fix, but are not currently affecting the code performance.
 
-    - handeling empty calibrator fields list in ``otfms``
+    - handling empty calibrator fields list in ``otfms``
     - sub-optimal calls to run ``CASA`` tasks in the ``otfms`` pipeline
+    - OTF rotation might have a bug (tackled in the ``OTF_rotation_fix`` branch) 
     
 Goals for version update
 ------------------------
