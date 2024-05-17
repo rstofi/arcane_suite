@@ -18,7 +18,8 @@ RUN tar -xvf casa-6.5.2-26-py3.8.tar.xz
 RUN mkdir requirements_folder
 
 #Git clone arcane suite
-RUN git clone https://github.com/rstofi/arcane_suite.git
+#RUN git clone https://github.com/rstofi/arcane_suite.git
+RUN git clone https://github.com/rstofi/arcane_suite.git#OTF_rotation_fix
 
 #Change folder to the arcane_suite
 WORKDIR /arcane_suite
