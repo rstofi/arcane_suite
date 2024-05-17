@@ -19,8 +19,7 @@ RUN mkdir requirements_folder
 
 #Git clone arcane suite
 #RUN git clone https://github.com/rstofi/arcane_suite.git
-RUN git clone https://github.com/rstofi/arcane_suite.git#main
-
+RUN git clone -b main https://github.com/rstofi/arcane_suite.git
 
 #Change folder to the arcane_suite
 WORKDIR /arcane_suite
