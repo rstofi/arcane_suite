@@ -19,7 +19,7 @@ RUN mkdir requirements_folder
 
 #Git clone arcane suite
 #RUN git clone https://github.com/rstofi/arcane_suite.git
-RUN git clone https://github.com/rstofi/arcane_suite.git#OTF_rotation_fix
+RUN git clone -b OTF_rotation_fix https://github.com/rstofi/arcane_suite.git
 
 #Change folder to the arcane_suite
 WORKDIR /arcane_suite
