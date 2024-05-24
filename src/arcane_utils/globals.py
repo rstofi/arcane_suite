@@ -1,6 +1,9 @@
 """Global variables used by `arcane_utils`
 """
 
+from astropy.coordinates import Longitude, Latitude, EarthLocation
+from astropy import units as u
+
 # Enabling messages of successful interaction with the MS e.g. successful
 # opening of a table
 global _ACK
@@ -52,3 +55,9 @@ _COMMENT_WHITESPACE_SKIP = 20
 _SUPPORTED_MS_COL_DIRECTION_KEYWORDS = ['QuantumUnits', 'MEASINFO']
 _SUPPORTED_MS_COL_DIR_UNITS = ['rad']
 _SUPPORTED_MS_COL_DIR_REFERENCES = ['J2000']
+
+#Get MeerKAT observation location
+_MeerKAT_location = EarthLocation.from_geodetic(
+                Longitude('21:26:38.0', u.degree, wrap_angle=180. * u.degree, copy=False),
+                Latitude('-30:42:39.8', u.degree, copy=False),
+                height=u.Quantity(1086.6, u.m, copy=False))

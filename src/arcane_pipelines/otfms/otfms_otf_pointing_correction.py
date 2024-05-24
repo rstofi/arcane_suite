@@ -14,6 +14,7 @@ from astropy import units as u
 
 from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
+from arcane_utils.globals import *
 
 from arcane_pipelines.otfms import otfms_pipeline_util as putil
 from arcane_pipelines.otfms import otfms_defaults
@@ -26,7 +27,7 @@ from arcane_pipelines.otfms import otfms_defaults
 # === Functions ===
 
 
-def save_names_only(yaml_path, output_fname):
+def save_names_only(yaml_path, output_fname) -> None:
     """Wrapper function for the secondary purpose of the tool: generating the names
 
     Basically a for loop to get the name for every ID from the yaml file
@@ -67,6 +68,123 @@ def save_names_only(yaml_path, output_fname):
             namelistf.write('{0:s} {1:s} {2:.8f} {3:.8f}\n'.format(
                             ID, otf_field_name, ra_centre, dec_centre))
 
+    return 0
+
+# =========================================
+# THIS IS THE PATCH
+# =========================================
+
+# Ideally, I should store the (alt, az) coordinates in the config file (i.e. compute
+# it during generation in the init step). Then I only need to apply the rotation
+# on a per-pointing basis. However, now I am computing it every time from scratch
+# so I have all code here in this patch
+
+
+# NOTE: I am making the patch to work only with a single target field!
+
+def get_altaz_from_icrs(obs_time:float, obs_ra:float, obs_dec:float,
+                        obs_location=_MeerKAT_location) -> tuple:
+    """
+    Input time is an UNIX timestamp (float)
+    Input RA, Dec coordinates are in degrees (float)
+
+    Returns the (alt, az) coordinates for the telescope (MeerKAT by default), at
+    the given time pointing at (RA, Dec)
+    """
+
+    obs_time_in_iso = Time(obs_time, format='unix').format('iso')
+
+    altaz_frame = AltAz(location=obs_location, obstime=obs_time_in_iso)
+
+    sky_coord = SkyCoord(obs_ra * u.deg, obs_dec * u.deg, frame='icrs').transform_to(altaz_frame)
+
+    return (obs_time, sky_coord.alt.deg, sky_coord.az.deg)
+
+
+def get_init_delay_centre_values(yaml_path: str) -> tuple:
+    """
+    Helper function to get the delay centre values at the beginning of the observation
+    in the icrs reference frame.
+
+    Returns a tuple of (time:float, ra:float, dec:float)
+
+    The time is in UNIX time format, the (ra,dec) values are in degrees
+    """
+
+    # Get the MS file from the yaml
+
+    # Get the target field from the yaml
+
+    # Get the reference RA, DEC coordinates from the phase centre
+
+
+    # Get the RA, Dec and time (!) values from the reference .npz file
+
+
+    # Get the time matching closest to the (RA, Dec) coordinates of the phase centre
+    # NOTE: this time might well be before the observation starts (i.e. we have visibility values)
+    # -> this crucial time info is in the .npz file and NOT in the MS!
+
+
+    # Convert (RA, Dec) to (alt, az) using the observation start time we just obtained
+    # -> call get_altaz_from_icrs()
+
+    # Return results
+
+
+def sidereal_correction(obs_time:float, obs_init_alt:float, obs_init_az:float,
+                        obs_location=_MeerKAT_location) -> tuple:
+    """The initial MS file has the (RA, Dec) coordinates for the centre of the scan
+    in the beginning of the scan. But the correlator is fixed in (alt, az) coordinates.
+
+    And so we need to update the correlator's delay centre as the sky rotates (with
+    sidereal speed, hence the function name).
+
+    In this function we compute the new (RA, Dec) coordinates only.
+    """
+
+    iso_obs_time = Time(obs_time, format='unix').format('iso')
+
+    # Set the position to (the fixed) (alt, az) position at obs_time
+    init_delay_centre = SkyCoord(alt = obs_init_alt * u.deg,
+                            az = obs_init_az * u.deg,
+                            obstime = iso_obs_time,
+                            frame = 'altaz',
+                            location = obs_location)
+
+    # Convert back to icrs
+    corrected_delay_centre = init_delay_centre.transform_to('icrs')
+
+    return (corrected_delay_centre.ra.deg, corrected_delay_centre.dec.deg)
+
+
+def apply_sidereal_correction(yaml_path: str,
+                obs_start_time:float, obs_start_alt: float, obs_start_az:float,
+                yaml_path:str, otf_id:int) -> None:
+    """We apply the sidereal correction to the OTF pointing MS.
+    """
+
+    # Get the initial (alt, az) values
+    # -> call get_init_delay_centre_values()
+    # NOTE: this is the redundant calculation part
+
+    # Get the time for the OTF pointing based on ID
+
+
+    # Compute the new (RA, Dec) coordinates from the sidereal rotation
+    # NOTE: here we use the fact that the (alt, az) values set in the correlator
+    # are CONSTANT for the scanning part of the observation
+    # -> call sidereal_correction()
+
+    # Overwrite the MS pointing centre (probably need to have the field name)
+
+
+    #DONE
+
+
+
+
+# =========================================
 
 def main():
     """A custom tool with four purposes:
@@ -90,7 +208,7 @@ def main():
 
     TO DO: add an argument, that allows to specify the new name acroym part
 
-    TO DO: allow to rename not oly the first row, by adding an argument for the
+    TO DO: allow to rename not only the first row, by adding an argument for the
         row to rename
 
     NOTE: The keyword argument descriptions were created by ChatGPT3.
@@ -187,7 +305,7 @@ def main():
     log_level = pipeline.get_var_from_yaml(yaml_path=yaml_path,
                                            var_name='log_level')
 
-    # Run when only te names are generated
+    # Run when only the names are generated
     if args.save_names_only:
         logger = pipeline.init_logger()
 
@@ -244,7 +362,7 @@ def main():
     output_otf_dir = pipeline.get_var_from_yaml(yaml_path=yaml_path,
                                                 var_name='blob_dir')
 
-    # Compute the OTF pointing MS name based on the naming convenction
+    # Compute the OTF pointing MS name based on the naming convention
     otf_MS_path = os.path.join(
         output_otf_dir,
         'otf_pointing_no_{0:s}.ms'.format(

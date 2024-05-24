@@ -137,7 +137,7 @@ def is_command_line_tool(command_name, t_args=None):
     https://stackoverflow.com/questions/11210104/check-if-a-program-exists-from-a-python-script
     https://stackoverflow.com/questions/12060863/python-subprocess-call-a-bash-alias
 
-    Basically do a call of the command using a plane envinroment and if there
+    Basically do a call of the command using a plane environment and if there
     is an error with the command, i.e. because it is an alias. The code attempts
     to load /bin/bash/ in an interactive mode (which includes .bashrc)
 
@@ -173,15 +173,17 @@ def is_command_line_tool(command_name, t_args=None):
         try:
             # Open shell in interactive mode with /bin/bas/ loaded
             check_for_alias_proc = subprocess.run(
-                ['/bin/bash', '-i', '-c', 'command -v {0:s} > /dev/null'.format(command_name)])
+                ['/bin/bash', '-i', '-c', 'command -v {0:s} > /dev/null'.format(command_name)],
+                stdout=devnull, stderr=devnull)
 
             if check_for_alias_proc.returncode != 0:
                 return False
             else:
                 return True
         except BaseException:
-            if e.errno == errno.ENOENT:
-                return False
+            #if e.errno == errno.ENOENT:
+            #    return False
+            return False
     return True
 
 

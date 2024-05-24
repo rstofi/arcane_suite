@@ -657,7 +657,7 @@ def get_closest_pointing_from_yaml(yaml_path: str, otf_ID: str):
         'Getting the closest coordinate from the reference pointing file ' +
         'for OTF ID: {0:s}'.format(otf_ID))
 
-    # Get the RA and Dec values from the pointing reference fil
+    # Get the RA and Dec values from the pointing reference file
     pointing_ref_path = pipeline.get_var_from_yaml(yaml_path=yaml_path,
                                                    var_name='pointing_ref')
 
