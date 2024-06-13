@@ -668,7 +668,11 @@ def add_aliases_to_config_file(
 
 
 def add_unique_defaults_to_config_file(template_path, unique_defaults_dict):
-    """The pipelines defined in `arcane_suite` have the defaults stored in a
+    """
+
+    NOTE: this docstring is OUT OF DATE -> need to rewrite it
+
+    The pipelines defined in `arcane_suite` have the defaults stored in a
     `pipeline_name_defaults.py` file.
 
     The unique sections and variables should be stored in this file in the following

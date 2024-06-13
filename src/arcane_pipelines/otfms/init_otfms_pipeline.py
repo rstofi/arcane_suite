@@ -277,6 +277,26 @@ def main():
 
     output_snakefile_path = os.path.join(working_dir, 'Snakefile')
 
+
+    # === Get the (t0, Alt, Az) coordinates for the sidereal correction
+    logger.debug('Configuring sidereal correction...')
+
+    sidereal_correction = True
+
+    t0, alt_t0, az_t0 = putil.get_otfms_sidereal_correction_variables(args.config_file)
+
+    # TO DO: add here a more strict chgeck for the sidereal correction
+    if t0 == 0.0:
+        logger.debug('No sidereal correction is configured....')
+        sidereal_correction = False
+    else:
+        logger.debug('Sidereal correction configured as:')
+        logger.debug('UNIX t0 (i.e. correlation fixed at this point): {0:.4f}'.format(t0))
+        logger.debug('Alt at t0 (i.e. correlation fixed at this point): {0:.4f}'.format(alt_t0))
+        logger.debug('Az at t0 (i.e. correlation fixed at this point): {0:.4f}'.format(az_t0))
+
+    #logger.debug('t0 is {t0}')
+
     # === Configure output and garbage collection
     logger.debug('Configuring output and garbage collection...')
 
@@ -471,6 +491,12 @@ def main():
         else:
             sconfig.write("MS_outname:  '{0:s}'\n".format(
                 'test'))
+        sconfig.write("sidereal_correction:  {0:s}\n".format(str(sidereal_correction)))
+        if sidereal_correction:
+            sconfig.write("sidereal_correction_t0:  {0:.8f}\n".format(t0))
+            sconfig.write("sidereal_correction_Alt_t0:  {0:.8f}\n".format(alt_t0))
+            sconfig.write("sidereal_correction_Az_t0:  {0:.8f}\n".format(az_t0))
+
         sconfig.write('time_crossmatch_threshold:  {0:.8f}\n'.format(
             time_crossmatch_threshold))
         sconfig.write('split_timedelta:  {0:.8f}\n'.format(

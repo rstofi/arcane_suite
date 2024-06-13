@@ -14,7 +14,7 @@ from astropy import units as u
 
 from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
-from arcane_utils.globals import *
+from arcane_utils.globals import _MeerKAT_location
 
 from arcane_pipelines.otfms import otfms_pipeline_util as putil
 from arcane_pipelines.otfms import otfms_defaults
@@ -111,26 +111,17 @@ def get_init_delay_centre_values(yaml_path: str) -> tuple:
     The time is in UNIX time format, the (ra,dec) values are in degrees
     """
 
-    # Get the MS file from the yaml
 
-    # Get the target field from the yaml
+    t0 = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='sidereal_correction_t0')
 
-    # Get the reference RA, DEC coordinates from the phase centre
+    alt_t0 = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='sidereal_correction_Alt_t0')
 
+    az_t0 = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='sidereal_correction_Az_t0')
 
-    # Get the RA, Dec and time (!) values from the reference .npz file
-
-
-    # Get the time matching closest to the (RA, Dec) coordinates of the phase centre
-    # NOTE: this time might well be before the observation starts (i.e. we have visibility values)
-    # -> this crucial time info is in the .npz file and NOT in the MS!
-
-
-    # Convert (RA, Dec) to (alt, az) using the observation start time we just obtained
-    # -> call get_altaz_from_icrs()
-
-    # Return results
-
+    return t0, alt_t0, az_t0
 
 def sidereal_correction(obs_time:float, obs_init_alt:float, obs_init_az:float,
                         obs_location=_MeerKAT_location) -> tuple:
@@ -157,19 +148,25 @@ def sidereal_correction(obs_time:float, obs_init_alt:float, obs_init_az:float,
 
     return (corrected_delay_centre.ra.deg, corrected_delay_centre.dec.deg)
 
+def validate_delay_centre_at_t0(yaml_path:str) -> bool:
+    """True if the dealy centre at t0 is what thew user gave the code based on the MS file
+    False otherwise
+    """
 
-def apply_sidereal_correction(yaml_path: str,
-                obs_start_time:float, obs_start_alt: float, obs_start_az:float,
-                yaml_path:str, otf_id:int) -> None:
+    pass
+
+def apply_sidereal_correction(yaml_path: str, otf_id:int,
+                t0:float, alt_t0: float, az_t0:float) -> None:
     """We apply the sidereal correction to the OTF pointing MS.
     """
 
-    # Get the initial (alt, az) values
-    # -> call get_init_delay_centre_values()
-    # NOTE: this is the redundant calculation part
-
+    # get_init_delay_centre_values() is already called and so its output is the input here
+    
     # Get the time for the OTF pointing based on ID
+    # -> gives us obs_time
 
+    # Check the MS delay centre (alt, az) vased on t0 to see if the correction is valid
+    # call -> validate_delay_centre_at_t0()
 
     # Compute the new (RA, Dec) coordinates from the sidereal rotation
     # NOTE: here we use the fact that the (alt, az) values set in the correlator
@@ -180,6 +177,7 @@ def apply_sidereal_correction(yaml_path: str,
 
 
     #DONE
+    pass
 
 
 
@@ -220,6 +218,8 @@ def main():
 
     '-i' or '--otf_id': (optional, str, default: None)
         The ID of the OTF pointing used
+    '-sc' or '--sidereal_correction': (optional, bool)
+        If True the additional sidereal correction is applied before the OTF correction
 
     '-sn' or '--save_names_only': (optional, bool)
         If True a file is generated with all OTF IDs and field names
@@ -255,6 +255,13 @@ def main():
         required=False,
         help='The ID of the OTF pointing used',
         action='store', type=str, default=None)
+
+    parser.add_argument(
+        '-sc',
+        '--sidereal_correction',
+        required=False,
+        help='If True the additional sidereal correction is applied before the OTF correction',
+        action='store_true')
 
     parser.add_argument(
         '-sn',
@@ -344,7 +351,11 @@ def main():
                     "mode with OTF_ID: {0:s}".format(args.otf_id))
     else:
         logger = pipeline.init_logger()
-        logger.info("Running *otf_pointing_correction* in 'renaming' " +
+        if args.sidereal_correction:
+            logger.info("Running *otfms_otf_pointing_correction* in 'sidereal_correction' mode")
+        
+        else:
+            logger.info("Running *otf_pointing_correction* in 'renaming' " +
                     "mode with OTF_ID: {0:s}".format(args.otf_id))
 
     if log_level != 'INFO':
@@ -374,6 +385,36 @@ def main():
 
     time_centre, ra_centre, dec_centre = putil.get_closest_pointing_from_yaml(
         yaml_path, args.otf_id)
+
+    # =========================================
+    # THIS IS THE PATCH
+    # =========================================
+
+    # Invoke the Sidereal correction
+    if args.sidereal_correction:
+
+        # Check if sidereal correction is configured
+        sidereal_correction = pipeline.get_var_from_yaml(
+            yaml_path=yaml_path, var_name='sidereal_correction')
+
+
+        if sidereal_correction == False:
+            logger.info('Sidereal correction is not configured!')
+            sys.exit(0)
+
+        else:
+            t0, alt_t0, az_t0 = get_init_delay_centre_values(yaml_path)
+
+            logger.info('Sidereal correction configured as:')
+            logger.info('UNIX t0 (i.e. correlation fixed at this point): {0:.4f}'.format(t0))
+            logger.info('Alt at t0 (i.e. correlation fixed at this point): {0:.4f}'.format(alt_t0))
+            logger.info('Az at t0 (i.e. correlation fixed at this point): {0:.4f}'.format(az_t0))
+
+            # Now apply the correction
+
+            sys.exit(0)
+
+    # =========================================
 
     if args.direction_string:
         # Get the pointing centre string

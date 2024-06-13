@@ -339,6 +339,8 @@ rule apply_phase_rotation:
         '{0:s}'.format(LOG_dir) +\
         '/otf_pointing_no_{field_ID}_chgcentre.log'
     shell:
+        'arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} -sc ' +\
+        '>> {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log 2>&1 ; ' +\
         '{params.chgcentre_alias} {params.blob_dir}/otf_pointing_no_{wildcards.field_ID}.ms ' +\
         '$(arcane_otfms_otf_pointing_correction -c {params.yaml_path} -i {wildcards.field_ID} ' +\
         '-ds -l {params.log_dir}/otf_pointing_no_{wildcards.field_ID}_chgcentre.log) ' +\

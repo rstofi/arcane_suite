@@ -149,6 +149,67 @@ def get_otfms_data_variables(config_path: str):
 
     return MS_dir, pointing_ref, split_calibrators, flag_noise_diode
 
+def get_otfms_sidereal_correction_variables(config_path: str):
+    """ Get the (t0, Alt, Az) coordinates from the config file if not provided
+    returns (0.0, 0.0, 0.0)
+    """
+    config = configparser.ConfigParser(allow_no_value=True)
+    config.read(config_path)
+
+    # t0
+    default_t0 = float(otfms_defaults._otfms_default_config_dict['DATA']['t0'][0])
+
+    try:
+        t0 = pipeline.get_valued_param_from_config(
+                config_path,
+                param_section='DATA',
+                param_name='t0',
+                param_type='float',
+                param_default=default_t0)
+
+    except BaseException:
+        logger.debug(
+            "Cant read 't0' from config, fallback to default: {0:.4f} ...".format(default_t0))
+
+        t0 = default_t0
+
+    # alt_t0
+    default_alt_t0 = float(otfms_defaults._otfms_default_config_dict['DATA']['delay_centre_Alt_t0'][0])
+
+    try:
+        alt_t0 = pipeline.get_valued_param_from_config(
+                config_path,
+                param_section='DATA',
+                param_name='delay_centre_Alt_t0',
+                param_type='float',
+                param_default=default_alt_t0)
+
+    except BaseException:
+        logger.debug(
+            "Cant read 'delay_centre_Alt_t0' from config, fallback to default: {0:.4f} ...".format(default_alt_t0))
+
+        alt_t0 = default_alt_t0
+
+    # az_t0
+    default_az_t0 = float(otfms_defaults._otfms_default_config_dict['DATA']['delay_centre_Az_t0'][0])
+
+    try:
+        az_t0 = pipeline.get_valued_param_from_config(
+                config_path,
+                param_section='DATA',
+                param_name='delay_centre_Az_t0',
+                param_type='float',
+                param_default=default_az_t0)
+
+    except BaseException:
+        logger.debug(
+            "Cant read 'delay_centre_Az_t0' from config, fallback to default: {0:.4f} ...".format(default_az_t0))
+
+        az_t0 = default_az_t0
+
+
+    return t0, alt_t0, az_t0
+
 
 def get_otfms_data_selection_from_config(
         config_path: str):
