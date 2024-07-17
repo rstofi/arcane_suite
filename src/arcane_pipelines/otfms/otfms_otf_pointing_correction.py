@@ -11,6 +11,8 @@ import logging
 
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+from astropy.time import Time
+from astropy.coordinates import AltAz
 
 from arcane_utils import pipeline
 from arcane_utils import ms_wrapper
@@ -92,7 +94,8 @@ def get_altaz_from_icrs(obs_time:float, obs_ra:float, obs_dec:float,
     the given time pointing at (RA, Dec)
     """
 
-    obs_time_in_iso = Time(obs_time, format='unix').format('iso')
+    obs_time_in_iso = Time(obs_time, format='unix')
+    obs_time_in_iso.format = 'iso'
 
     altaz_frame = AltAz(location=obs_location, obstime=obs_time_in_iso)
 
@@ -123,7 +126,7 @@ def get_init_delay_centre_values(yaml_path: str) -> tuple:
 
     return t0, alt_t0, az_t0
 
-def sidereal_correction(obs_time:float, obs_init_alt:float, obs_init_az:float,
+def compute_sidereal_correction(obs_time:float, obs_init_alt:float, obs_init_az:float,
                         obs_location=_MeerKAT_location) -> tuple:
     """The initial MS file has the (RA, Dec) coordinates for the centre of the scan
     in the beginning of the scan. But the correlator is fixed in (alt, az) coordinates.
@@ -134,7 +137,8 @@ def sidereal_correction(obs_time:float, obs_init_alt:float, obs_init_az:float,
     In this function we compute the new (RA, Dec) coordinates only.
     """
 
-    iso_obs_time = Time(obs_time, format='unix').format('iso')
+    iso_obs_time = Time(obs_time, format='unix')
+    iso_obs_time.format = 'iso'
 
     # Set the position to (the fixed) (alt, az) position at obs_time
     init_delay_centre = SkyCoord(alt = obs_init_alt * u.deg,
@@ -162,16 +166,16 @@ def apply_sidereal_correction(yaml_path: str, otf_id:int,
 
     # get_init_delay_centre_values() is already called and so its output is the input here
     
+    # Check the MS delay centre (alt, az) based on t0 to see if the correction is valid
+    # call -> validate_delay_centre_at_t0()
+
     # Get the time for the OTF pointing based on ID
     # -> gives us obs_time
-
-    # Check the MS delay centre (alt, az) vased on t0 to see if the correction is valid
-    # call -> validate_delay_centre_at_t0()
 
     # Compute the new (RA, Dec) coordinates from the sidereal rotation
     # NOTE: here we use the fact that the (alt, az) values set in the correlator
     # are CONSTANT for the scanning part of the observation
-    # -> call sidereal_correction()
+    # -> call compute_sidereal_correction()
 
     # Overwrite the MS pointing centre (probably need to have the field name)
 
@@ -403,14 +407,73 @@ def main():
             sys.exit(0)
 
         else:
+            # --- Get the configuration values for the correction
+
             t0, alt_t0, az_t0 = get_init_delay_centre_values(yaml_path)
+
+            # --- compute alt_t0 and az_t0 from manual input
+            """
+            ra_manual = 333.02336958
+            dec_manual = -31.52096753
+
+            guess_t0_altaz = get_altaz_from_icrs(obs_time=t0,
+                    obs_ra=ra_manual,
+                    obs_dec=dec_manual)
+
+
+            alt_t0 = guess_t0_altaz[1]
+            az_t0 = guess_t0_altaz[2]
+            """
+
+            # --- Get the OTF pointing values
+
+            # Pointing time
+            pointing_time = ms_wrapper.get_time_based_on_field_names_and_scan_IDs(mspath=otf_MS_path)[0]
+
+            logger.info(f'Pointing time: {pointing_time}')
+
+            phase_centres_and_field_id_dict = \
+                ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(mspath=otf_MS_path)
+
+            logger.info(f'Phase centre RA: {phase_centres_and_field_id_dict[0][0]}')
+            logger.info(f'Phase centre Dec: {phase_centres_and_field_id_dict[0][1]}')
+
+            # --- Quick hack: use the (alt, az) values from the pointing (as this should be correct)
+            #guess_altaz = get_altaz_from_icrs(obs_time=t0,
+            #        obs_ra=phase_centres_and_field_id_dict[0][0],
+            #        obs_dec=phase_centres_and_field_id_dict[0][1])
+
+            #logger.info(f'Guessing t0 value at t0: {guess_altaz[0]}')
+            #logger.info(f'Guessing Alt value at t0: {guess_altaz[1]}')
+            #logger.info(f'Guessing Az value at t0: {guess_altaz[2]}')
+
+            # --- Compute RA and Dec at t0 for checking code
+
+            icrs_coords_t0 = compute_sidereal_correction(obs_time=t0,
+                                obs_init_alt=alt_t0,
+                                obs_init_az=az_t0)
 
             logger.info('Sidereal correction configured as:')
             logger.info('UNIX t0 (i.e. correlation fixed at this point): {0:.4f}'.format(t0))
             logger.info('Alt at t0 (i.e. correlation fixed at this point): {0:.4f}'.format(alt_t0))
             logger.info('Az at t0 (i.e. correlation fixed at this point): {0:.4f}'.format(az_t0))
+            logger.info(f'RA at t0 (i.e. correlation fixed at this point): {icrs_coords_t0[0]}')
+            logger.info(f'Dec at t0 (i.e. correlation fixed at this point): {icrs_coords_t0[1]}')
 
-            # Now apply the correction
+            # --- Apply the correction
+
+            # Only print out the corrections for now
+
+            #corrected_icrs_coords = compute_sidereal_correction(obs_time=pointing_time,
+            #                    obs_init_alt=guess_altaz[1],
+            #                    obs_init_az=guess_altaz[2])
+
+            corrected_icrs_coords = compute_sidereal_correction(obs_time=pointing_time,
+                                obs_init_alt=alt_t0,
+                                obs_init_az=az_t0)
+
+            logger.info(f'Sidereal corrected RA: {corrected_icrs_coords[0]}')
+            logger.info(f'Sidereal corrected Dec: {corrected_icrs_coords[1]}')
 
             sys.exit(0)
 
