@@ -425,28 +425,6 @@ def main():
             az_t0 = guess_t0_altaz[2]
             """
 
-            # --- Get the OTF pointing values
-
-            # Pointing time
-            pointing_time = ms_wrapper.get_time_based_on_field_names_and_scan_IDs(mspath=otf_MS_path)[0]
-
-            logger.info(f'Pointing time: {pointing_time}')
-
-            phase_centres_and_field_id_dict = \
-                ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(mspath=otf_MS_path)
-
-            logger.info(f'Phase centre RA: {phase_centres_and_field_id_dict[0][0]}')
-            logger.info(f'Phase centre Dec: {phase_centres_and_field_id_dict[0][1]}')
-
-            # --- Quick hack: use the (alt, az) values from the pointing (as this should be correct)
-            #guess_altaz = get_altaz_from_icrs(obs_time=t0,
-            #        obs_ra=phase_centres_and_field_id_dict[0][0],
-            #        obs_dec=phase_centres_and_field_id_dict[0][1])
-
-            #logger.info(f'Guessing t0 value at t0: {guess_altaz[0]}')
-            #logger.info(f'Guessing Alt value at t0: {guess_altaz[1]}')
-            #logger.info(f'Guessing Az value at t0: {guess_altaz[2]}')
-
             # --- Compute RA and Dec at t0 for checking code
 
             icrs_coords_t0 = compute_sidereal_correction(obs_time=t0,
@@ -460,20 +438,54 @@ def main():
             logger.info(f'RA at t0 (i.e. correlation fixed at this point): {icrs_coords_t0[0]}')
             logger.info(f'Dec at t0 (i.e. correlation fixed at this point): {icrs_coords_t0[1]}')
 
-            # --- Apply the correction
+            # --- Get the OTF pointing values
 
-            # Only print out the corrections for now
+            # Pointing time
+            pointing_time = ms_wrapper.get_time_based_on_field_names_and_scan_IDs(mspath=otf_MS_path)[0]
 
-            #corrected_icrs_coords = compute_sidereal_correction(obs_time=pointing_time,
-            #                    obs_init_alt=guess_altaz[1],
-            #                    obs_init_az=guess_altaz[2])
+            logger.info(f'Pointing time: {pointing_time}')
+            phase_centres_and_field_id_dict = \
+                ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(mspath=otf_MS_path,
+                                                                            close=True)
+
+            logger.info(f'Phase centre RA in the MS: {phase_centres_and_field_id_dict[0][0]}')
+            logger.info(f'Phase centre Dec in the MS: {phase_centres_and_field_id_dict[0][1]}')
+
+            # --- Compute the correction
+
+            time_diff = pointing_time - t0
+
+            # Code should work with this as well.
+            if time_diff <= 0:
+                logger.warning(f'Sidereal correction with negative time diff!')
+
+            logger.info(f'Time diff: {time_diff} s')
+
+
+            logger.info(f'Applying sidereal correction ...')
 
             corrected_icrs_coords = compute_sidereal_correction(obs_time=pointing_time,
                                 obs_init_alt=alt_t0,
                                 obs_init_az=az_t0)
 
-            logger.info(f'Sidereal corrected RA: {corrected_icrs_coords[0]}')
-            logger.info(f'Sidereal corrected Dec: {corrected_icrs_coords[1]}')
+            logger.info(f'Computed sidereal corrected RA: {corrected_icrs_coords[0]}')
+            logger.info(f'Computed sidereal corrected Dec: {corrected_icrs_coords[1]}')
+
+
+            # --- Apply the correction
+            ms_wrapper.overwrite_phase_centre(mspath=otf_MS_path, field_ID=0,
+                            new_RA=corrected_icrs_coords[0],
+                            new_Dec=corrected_icrs_coords[1])
+
+            # --- Get the new phase centre coordinates from the MS
+            phase_centres_and_field_id_dict = \
+                ms_wrapper.get_phase_centres_and_field_ID_list_dict_from_MS(mspath=otf_MS_path,
+                                                                            close=True)
+
+            logger.info(phase_centres_and_field_id_dict)
+
+            logger.info(f'Corrected phase centre RA in the MS: {phase_centres_and_field_id_dict[0][0]}')
+            logger.info(f'Corrected phase centre Dec in the MS: {phase_centres_and_field_id_dict[0][1]}')
 
             sys.exit(0)
 

@@ -698,7 +698,7 @@ def get_phase_centres_and_field_ID_list_dict_from_MS(mspath,
     """
     MS = create_MS_table_object(mspath)
 
-    ftable_name = 'FIELD'  # Only use thr FIELD table
+    ftable_name = 'FIELD'  # Only use the FIELD table
 
     # Get the field IDs if not provided
     if field_ID_list is None:
@@ -748,7 +748,7 @@ def get_phase_centres_and_field_ID_list_dict_from_MS(mspath,
         if field_ID not in ftable.rownumbers():
             raise ValueError('Invalid field ID provided!')
 
-        # Get the RA and Dec valused from the table, but first check the
+        # Get the RA and Dec values from the table, but first check the
         # direction columns
         check_dir_column_values(
             ftable,
@@ -776,6 +776,58 @@ def get_phase_centres_and_field_ID_list_dict_from_MS(mspath,
         close_MS_table_object(MS)
 
     return phase_centres_field_IDs_dict
+    
+def overwrite_phase_centre(mspath:str,
+                            field_ID:int,
+                            new_RA:float,
+                            new_Dec:float,
+                            ant1_ID:int=0,
+                            ant2_ID:int=1,
+                            close:bool=True):
+
+    """
+    """
+    MS = create_MS_table_object(mspath)
+
+    # --- Open the fields table
+    ftable_name = 'FIELD'  # Only use the FIELD table
+    ftable_path = get_MS_subtable_path(MS, ftable_name, close=False)
+
+    ftable = create_MS_table_object(
+        ftable_path,
+        is_table=True,
+        table_name=ftable_name,
+        readonly=False)
+
+    # --- Check if a valid field ID is provided
+    if field_ID not in ftable.rownumbers():
+        raise ValueError('Invalid field ID provided!')
+
+
+    # --- Check supported formats (if no errors raised we are good)
+    check_dir_column_values(
+        ftable,
+        table_name=ftable_name,
+        colname='PHASE_DIR')
+
+    # --- Put the RA and Dec values
+    # Select the first polarisation i.e. working only for StokesI for now
+ 
+    # Read the current PHASE_DIR column
+    phase_dir = ftable.getcol('PHASE_DIR')
+
+    # Update the PHASE_DIR values (in radians) for the specified FIELD_ID
+    phase_dir[field_ID, 0, 0] = np.deg2rad(new_RA)
+    phase_dir[field_ID, 0, 1] = np.deg2rad(new_Dec)
+
+    # Write the updated PHASE_DIR column back to the table
+    ftable.putcol('PHASE_DIR', phase_dir)
+
+    # Close the table
+    close_MS_table_object(ftable, is_table=True, table_name=ftable_name)
+
+    if close:
+        close_MS_table_object(MS)
 
 
 # === MAIN ===
