@@ -9,7 +9,8 @@
 FROM python:3.11.9-slim-bullseye as builder
 
 #Update apt-get and install useful packages: python-is-python3 to symlink python command to python3 command, git, wget, xz-utils, pip3
-RUN apt-get update && apt-get -y install wget xz-utils git time
+#Added build-essential for gcc
+RUN apt-get update && apt-get -y install wget xz-utils git time build-essential
 
 #Download CASA tarball
 RUN wget https://casa.nrao.edu/download/distro/casa/release/rhel/casa-6.5.2-26-py3.8.tar.xz
@@ -31,7 +32,8 @@ WORKDIR /arcane_suite
 #RUN git checkout d7d394fc03375b3efa7cc2711834462c812473ad
 
 #Update to latest commit
-RUN git checkout 9e722b7526b26f7c23bbc0b606a16f13cdea1f16
+RUN git fetch
+RUN git checkout 33dd9d9059868a057c066d0013589ef727b06c7a
 
 #Install all requirements
 RUN pip3 install --target=/requirements_folder -r ./requirements.txt

@@ -7,4 +7,4 @@ matplotlib>=3.5.0
 #snakemake>=5.10.0
 snakemake>=8.16.0
 pyyaml>=6.0
-#pulp==2.7.0
+pulp==2.7.0 # To fix Snamemake...
