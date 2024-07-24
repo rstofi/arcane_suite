@@ -34,7 +34,7 @@ WORKDIR /arcane_suite
 
 #Update to latest commit
 RUN git fetch
-RUN git checkout bd461dd563825512e3c4b3c57c73e9d334c4baf5
+RUN git checkout 01e7e68b9c32bf83f27a013fd68d455a5fc9dd50
 
 #Install all requirements
 RUN pip3 install --target=/requirements_folder -r ./requirements.txt
