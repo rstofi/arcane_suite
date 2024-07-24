@@ -4,13 +4,14 @@
 #Updated by Kristof Rozgonyi
 
 #Builder image: lighter to download, we use it ot install some stuff- python image
-#FROM python:3.8.16-slim-bullseye as builder
+FROM python:3.8.16-slim-bullseye as builder
 # Update pythgon to be complatible with new Snakemake version
-FROM python:3.11.9-slim-bullseye as builder
+#FROM python:3.11.9-slim-bullseye as builder
 
 #Update apt-get and install useful packages: python-is-python3 to symlink python command to python3 command, git, wget, xz-utils, pip3
 #Added build-essential for gcc
-RUN apt-get update && apt-get -y install wget xz-utils git time build-essential
+#RUN apt-get update && apt-get -y install wget xz-utils git time build-essential
+RUN apt-get update && apt-get -y install wget xz-utils git time
 
 #Download CASA tarball
 RUN wget https://casa.nrao.edu/download/distro/casa/release/rhel/casa-6.5.2-26-py3.8.tar.xz
@@ -33,7 +34,7 @@ WORKDIR /arcane_suite
 
 #Update to latest commit
 RUN git fetch
-RUN git checkout 33dd9d9059868a057c066d0013589ef727b06c7a
+RUN git checkout bd461dd563825512e3c4b3c57c73e9d334c4baf5
 
 #Install all requirements
 RUN pip3 install --target=/requirements_folder -r ./requirements.txt
