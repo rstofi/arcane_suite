@@ -1,9 +1,12 @@
 # syntax=docker/dockerfile:1
 
 #Original dockerfile by Nicola Malavasi 
+#Updated by Kristof Rozgonyi
 
 #Builder image: lighter to download, we use it ot install some stuff- python image
-FROM python:3.8.16-slim-bullseye as builder
+#FROM python:3.8.16-slim-bullseye as builder
+# Update pythgon to be complatible with new Snakemake version
+FROM python:3.11.9-slim-bullseye as builder
 
 #Update apt-get and install useful packages: python-is-python3 to symlink python command to python3 command, git, wget, xz-utils, pip3
 RUN apt-get update && apt-get -y install wget xz-utils git time
@@ -25,12 +28,13 @@ RUN git clone -b OTF_rotation_fix https://github.com/rstofi/arcane_suite.git
 WORKDIR /arcane_suite
 
 #Set specific commit
-RUN git checkout d7d394fc03375b3efa7cc2711834462c812473ad
+#RUN git checkout d7d394fc03375b3efa7cc2711834462c812473ad
+
+#Update to latest commit
+RUN git checkout 9e722b7526b26f7c23bbc0b606a16f13cdea1f16
 
 #Install all requirements
 RUN pip3 install --target=/requirements_folder -r ./requirements.txt
-
-
 
 #Use kernsuite image as it contains python-casacore and chgcentre
 FROM kernsuite/base:7 as runner
