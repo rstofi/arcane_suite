@@ -1,6 +1,7 @@
 #Added by me by hand: ingnoring .snakemake directories and .sif apptainer images
 *.snakemake/
 *.sif
+*.swp
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
